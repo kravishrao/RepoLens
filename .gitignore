@@ -34,3 +34,7 @@ results/
 
 # Logs
 *.log
+
+# Python test and lint caches
+.pytest_cache/
+.ruff_cache/
