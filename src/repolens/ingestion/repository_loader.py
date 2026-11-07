@@ -6,6 +6,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from urllib.parse import urlparse
 
+_SCP_SSH_URL_PATTERN = re.compile(
+    r"^(?P<username>[^@/:\s]+)@"
+    r"(?P<host>[^/:\s]+):"
+    r"(?P<path>[^\s]+)$"
+)
+
 
 class RepositoryError(Exception):
     """Base exception for repository loading errors."""
@@ -83,7 +89,24 @@ class RepositoryLoader:
         if not isinstance(url, str) or not url.strip():
             raise InvalidRepositoryError("Repository URL cannot be empty.")
 
-        parsed = urlparse(url.strip())
+        url = url.strip()
+
+        # Support SCP-style SSH URLs:
+        # git@github.com:owner/repository.git
+        scp_match = _SCP_SSH_URL_PATTERN.fullmatch(url)
+
+        if scp_match:
+            if scp_match.group("username") != "git":
+                raise InvalidRepositoryError(
+                    "SCP-style SSH URLs must use the standard 'git' username."
+                )
+
+            if not scp_match.group("path").strip("/"):
+                raise InvalidRepositoryError("Invalid SSH repository path.")
+
+            return
+
+        parsed = urlparse(url)
 
         # Support local file URLs for testing and local Git sources.
         if parsed.scheme == "file":
@@ -94,10 +117,22 @@ class RepositoryLoader:
         if parsed.scheme not in {"https", "http", "ssh", "git"}:
             raise InvalidRepositoryError("Unsupported repository URL scheme.")
 
-        if not parsed.netloc:
+        if not parsed.hostname or not parsed.path.strip("/"):
             raise InvalidRepositoryError("Invalid repository URL.")
 
-        if parsed.username or parsed.password:
+        # SSH URLs legitimately use the username "git".
+        # Passwords must never be embedded in repository URLs.
+        if parsed.password is not None:
+            raise InvalidRepositoryError(
+                "Passwords must not be embedded in repository URLs."
+            )
+
+        if parsed.scheme == "ssh":
+            if parsed.username not in {None, "git"}:
+                raise InvalidRepositoryError(
+                    "SSH URLs must use the standard 'git' username."
+                )
+        elif parsed.username is not None:
             raise InvalidRepositoryError(
                 "Credentials must not be embedded in repository URLs."
             )
@@ -174,14 +209,18 @@ class RepositoryLoader:
         """Clone a remote Git repository into the workspace."""
         self._validate_remote_url(repository_url)
 
-        self.workspace.mkdir(
-            parents=True,
-            exist_ok=True,
-        )
+        repository_url = repository_url.strip()
 
-        parsed = urlparse(repository_url.strip())
+        # SCP-style SSH URLs do not have a parsed URL path.
+        scp_match = _SCP_SSH_URL_PATTERN.fullmatch(repository_url)
 
-        repository_name = Path(parsed.path.rstrip("/")).name
+        if scp_match:
+            repository_path = scp_match.group("path")
+        else:
+            parsed = urlparse(repository_url)
+            repository_path = parsed.path
+
+        repository_name = Path(repository_path.rstrip("/")).name
 
         repository_name = repository_name.removesuffix(".git")
 
@@ -193,6 +232,11 @@ class RepositoryLoader:
                 "Could not determine a valid repository name from the URL."
             )
 
+        self.workspace.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
         destination = self.workspace / repository_name
 
         if destination.exists():
@@ -203,7 +247,7 @@ class RepositoryLoader:
                 [
                     "clone",
                     "--",
-                    repository_url.strip(),
+                    repository_url,
                     str(destination),
                 ],
                 timeout=self.timeout,

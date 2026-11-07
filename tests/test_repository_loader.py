@@ -137,3 +137,28 @@ def test_existing_clone_destination_is_rejected(tmp_path):
 def test_load_repository_rejects_empty_source():
     with pytest.raises(InvalidRepositoryError):
         load_repository("")
+
+
+@pytest.mark.parametrize(
+    "repository_url",
+    [
+        "git@github.com:owner/repository.git",
+        "ssh://git@github.com/owner/repository.git",
+    ],
+)
+def test_valid_ssh_repository_urls(repository_url):
+    RepositoryLoader._validate_remote_url(repository_url)
+
+
+def test_ssh_url_with_password_is_rejected():
+    loader = RepositoryLoader()
+
+    with pytest.raises(InvalidRepositoryError):
+        loader.clone_remote("ssh://git:password@github.com/owner/repository.git")
+
+
+def test_https_url_with_credentials_is_rejected():
+    loader = RepositoryLoader()
+
+    with pytest.raises(InvalidRepositoryError):
+        loader.clone_remote("https://user:password@github.com/owner/repository.git")
