@@ -38,7 +38,7 @@ jobs:
           fi
 
       - name: Check code formatting
-        run: ruff format --check .
+        run: ruff format --check src tests
 
       - name: Run Ruff lint checks
-        run: ruff check .
+        run: ruff check src tests
