@@ -1,0 +1,222 @@
+use pyo3::exceptions::{PyException, PyValueError};
+use pyo3::intern;
+use pyo3::prelude::*;
+use pyo3::types::{PyDict, PyString, PyTuple};
+use pyo3::{PyTraverseError, PyVisit};
+
+use crate::input::InputType;
+use crate::py_gc::PyGcTraverse;
+
+use super::line_error::ToErrorValue;
+use super::{ErrorType, ValError};
+
+#[pyclass(extends=PyException, module="pydantic_core._pydantic_core")]
+#[derive(Debug, Clone)]
+pub struct PydanticOmit {}
+
+impl PydanticOmit {
+    pub(crate) fn new_err() -> PyErr {
+        PyErr::new::<Self, ()>(())
+    }
+}
+
+#[pymethods]
+impl PydanticOmit {
+    #[new]
+    pub fn py_new() -> Self {
+        Self {}
+    }
+
+    fn __str__(&self) -> &'static str {
+        self.__repr__()
+    }
+
+    fn __repr__(&self) -> &'static str {
+        "PydanticOmit()"
+    }
+}
+
+#[pyclass(extends=PyException, module="pydantic_core._pydantic_core")]
+#[derive(Debug, Clone)]
+pub struct PydanticUseDefault {}
+
+#[pymethods]
+impl PydanticUseDefault {
+    #[new]
+    pub fn py_new() -> Self {
+        Self {}
+    }
+
+    fn __str__(&self) -> &'static str {
+        self.__repr__()
+    }
+
+    fn __repr__(&self) -> &'static str {
+        "PydanticUseDefault()"
+    }
+}
+
+#[pyclass(extends=PyValueError, module="pydantic_core._pydantic_core", subclass, frozen)]
+#[derive(Debug, Clone, Default)]
+pub struct PydanticCustomError {
+    error_type: String,
+    message_template: String,
+    context: Option<Py<PyDict>>,
+}
+
+#[pymethods]
+impl PydanticCustomError {
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        self.context.py_gc_traverse(&visit)
+    }
+
+    #[new]
+    #[pyo3(signature = (error_type, message_template, context = None, /))]
+    pub fn py_new(error_type: String, message_template: String, context: Option<Bound<'_, PyDict>>) -> Self {
+        Self {
+            error_type,
+            message_template,
+            context: context.map(Bound::unbind),
+        }
+    }
+
+    #[getter(r#type)]
+    pub fn error_type(&self) -> &str {
+        &self.error_type
+    }
+
+    #[getter]
+    pub fn message_template(&self) -> &str {
+        &self.message_template
+    }
+
+    #[getter]
+    pub fn context(&self, py: Python) -> Option<Py<PyDict>> {
+        self.context.as_ref().map(|c| c.clone_ref(py))
+    }
+
+    pub fn message(&self, py: Python) -> PyResult<String> {
+        Self::format_message(&self.message_template, self.context.as_ref().map(|c| c.bind(py)))
+    }
+
+    fn __str__(&self, py: Python) -> PyResult<String> {
+        self.message(py)
+    }
+
+    fn __repr__(&self, py: Python) -> PyResult<String> {
+        let msg = self.message(py)?;
+        match self.context.as_ref() {
+            Some(ctx) => Ok(format!("{msg} [type={}, context={}]", self.error_type, ctx.bind(py))),
+            None => Ok(format!("{msg} [type={}, context=None]", self.error_type)),
+        }
+    }
+
+    // Instances created from Rust don't go through `BaseException.__init__()` and have empty `args`,
+    // so `BaseException.__reduce__()` can't be relied on:
+    fn __reduce__<'py>(slf: &Bound<'py, Self>) -> PyResult<Bound<'py, PyTuple>> {
+        let py = slf.py();
+        let args = slf.getattr(intern!(py, "args"))?.cast_into::<PyTuple>()?;
+        // Only use the stored values if `args` is empty, as `args` reflects the arguments
+        // passed to (potentially overridden) `__new__()` implementations of subclasses:
+        let args = if args.is_empty() {
+            let this = slf.get();
+            match &this.context {
+                Some(context) => (&this.error_type, &this.message_template, context).into_pyobject(py)?,
+                None => (&this.error_type, &this.message_template).into_pyobject(py)?,
+            }
+        } else {
+            args
+        };
+        match slf.getattr_opt(intern!(py, "__dict__"))? {
+            // e.g. attributes set on subclass instances, or exception notes:
+            Some(dict) if dict.is_truthy()? => (slf.get_type(), args, dict).into_pyobject(py),
+            _ => (slf.get_type(), args).into_pyobject(py),
+        }
+    }
+}
+
+impl PydanticCustomError {
+    pub fn into_val_error(self, input: impl ToErrorValue) -> ValError {
+        let error_type = ErrorType::CustomError {
+            error_type: self.error_type,
+            message_template: self.message_template,
+            context: self.context,
+        };
+        ValError::new(error_type, input)
+    }
+
+    pub fn format_message(message_template: &str, context: Option<&Bound<'_, PyDict>>) -> PyResult<String> {
+        let mut message = message_template.to_string();
+        if let Some(ctx) = context {
+            for (key, value) in ctx.iter() {
+                let key = key.cast::<PyString>()?;
+                if let Ok(py_str) = value.cast::<PyString>() {
+                    message = message.replace(&format!("{{{}}}", key.to_str()?), py_str.to_str()?);
+                } else if let Ok(value_int) = value.extract::<i64>() {
+                    message = message.replace(&format!("{{{}}}", key.to_str()?), &value_int.to_string());
+                } else {
+                    // fallback for anything else just in case
+                    message = message.replace(&format!("{{{}}}", key.to_str()?), &value.to_string());
+                }
+            }
+        }
+        Ok(message)
+    }
+}
+
+#[pyclass(extends=PyValueError, module="pydantic_core._pydantic_core", frozen)]
+#[derive(Debug, Clone)]
+pub struct PydanticKnownError {
+    error_type: ErrorType,
+}
+
+#[pymethods]
+impl PydanticKnownError {
+    fn __traverse__(&self, visit: PyVisit<'_>) -> Result<(), PyTraverseError> {
+        self.error_type.py_gc_traverse(&visit)
+    }
+
+    #[new]
+    #[pyo3(signature = (error_type, context=None, /))]
+    pub fn py_new(py: Python, error_type: &str, context: Option<Bound<'_, PyDict>>) -> PyResult<Self> {
+        let error_type = ErrorType::new(py, error_type, context)?;
+        Ok(Self { error_type })
+    }
+
+    #[getter(r#type)]
+    pub fn error_type(&self) -> String {
+        self.error_type.to_string()
+    }
+
+    #[getter]
+    pub fn message_template(&self) -> &'static str {
+        self.error_type.message_template_python()
+    }
+
+    #[getter]
+    pub fn context(&self, py: Python) -> PyResult<Option<Py<PyDict>>> {
+        self.error_type.py_dict(py)
+    }
+
+    pub fn message(&self, py: Python) -> PyResult<String> {
+        self.error_type.render_message(py, InputType::Python)
+    }
+
+    fn __str__(&self, py: Python) -> PyResult<String> {
+        self.message(py)
+    }
+
+    fn __repr__(&self, py: Python) -> PyResult<String> {
+        let msg = self.message(py)?;
+        match self.context(py)?.as_ref() {
+            Some(ctx) => Ok(format!("{msg} [type={}, context={}]", self.error_type(), ctx.bind(py))),
+            None => Ok(format!("{msg} [type={}, context=None]", self.error_type())),
+        }
+    }
+}
+
+impl PydanticKnownError {
+    pub fn into_val_error(self, input: impl ToErrorValue) -> ValError {
+        ValError::new(self.error_type, input)
+    }
+}
