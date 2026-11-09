@@ -211,7 +211,7 @@ class CodeGraph:
 
         results = []
 
-        for _, target, key, data in self._graph.out_edges(
+        for _, target, _key, data in self._graph.out_edges(
             code_unit_id,
             keys=True,
             data=True,
