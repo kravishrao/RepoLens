@@ -1,0 +1,28 @@
+# CODEOWNERS – RepoLens
+#
+# Each line maps a path pattern to one or more GitHub usernames.
+# Matched owners are automatically added as reviewers on every PR
+# that touches those paths.
+#
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default: all changes require review from the project lead ────────────────
+*                                   @kravishrao
+
+# ── CI / workflow ────────────────────────────────────────────────────────────
+.github/                            @kravishrao @Manoj-kanur
+
+# ── Core source ─────────────────────────────────────────────────────────────
+src/repolens/ingestion/             @kravishrao @BmHarshithKumar
+src/repolens/graph/                 @kravishrao @mohit2007malur-png
+src/repolens/config/                @kravishrao
+
+# ── Tests ───────────────────────────────────────────────────────────────────
+tests/                              @kravishrao @Manoj-kanur
+
+# ── Documentation ────────────────────────────────────────────────────────────
+docs/                               @kravishrao @Manoj-kanur
+*.md                                @kravishrao @Manoj-kanur
+
+# ── Dataset ─────────────────────────────────────────────────────────────────
+dataset/                            @kravishrao @BmHarshithKumar
