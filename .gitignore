@@ -38,3 +38,8 @@ results/
 # Python test and lint caches
 .pytest_cache/
 .ruff_cache/
+
+# Build and egg metadata
+*.egg-info/
+build/
+dist/
