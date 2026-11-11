@@ -351,3 +351,99 @@ def test_duplicate_function_names_have_unique_ids(parser, tmp_path):
 
     assert len(functions) == 2
     assert functions[0].id != functions[1].id
+
+
+def test_parse_file_populates_module_metadata(tmp_path):
+    source = '''"""Module documentation."""
+
+import math
+
+
+def calculate():
+    """Calculate a value."""
+    return math.sqrt(16)
+'''
+
+    file_path = tmp_path / "calculator.py"
+    file_path.write_text(source, encoding="utf-8")
+
+    result = PythonASTParser().parse_file(
+        file_path,
+        repository_root=tmp_path,
+    )
+
+    module = next(unit for unit in result.code_units if unit.kind == "module")
+
+    assert module.repository == str(tmp_path.resolve())
+    assert module.source_code == source
+    assert module.docstring == "Module documentation."
+
+
+def test_parse_file_populates_function_metadata(tmp_path):
+    source = '''def calculate():
+    """Calculate a value."""
+    return 42
+'''
+
+    file_path = tmp_path / "calculator.py"
+    file_path.write_text(source, encoding="utf-8")
+
+    result = PythonASTParser().parse_file(
+        file_path,
+        repository_root=tmp_path,
+    )
+
+    function = next(unit for unit in result.code_units if unit.kind == "function")
+
+    assert function.repository == str(tmp_path.resolve())
+    assert function.source_code == source.strip()
+    assert function.docstring == "Calculate a value."
+
+
+def test_parse_file_populates_class_and_method_metadata(tmp_path):
+    source = '''class Calculator:
+    """Calculator class."""
+
+    def add(self, first, second):
+        """Add two values."""
+        return first + second
+'''
+
+    file_path = tmp_path / "calculator.py"
+    file_path.write_text(source, encoding="utf-8")
+
+    result = PythonASTParser().parse_file(
+        file_path,
+        repository_root=tmp_path,
+    )
+
+    class_unit = next(unit for unit in result.code_units if unit.kind == "class")
+    method_unit = next(unit for unit in result.code_units if unit.kind == "method")
+
+    assert class_unit.docstring == "Calculator class."
+    assert class_unit.source_code.startswith("class Calculator:")
+
+    assert method_unit.docstring == "Add two values."
+    assert method_unit.source_code.startswith("    def add(")
+    assert method_unit.repository == str(tmp_path.resolve())
+
+
+def test_parse_file_populates_async_function_metadata(tmp_path):
+    source = '''async def fetch_data():
+    """Fetch data asynchronously."""
+    return 42
+'''
+
+    file_path = tmp_path / "service.py"
+    file_path.write_text(source, encoding="utf-8")
+
+    result = PythonASTParser().parse_file(
+        file_path,
+        repository_root=tmp_path,
+    )
+
+    function = next(unit for unit in result.code_units if unit.kind == "function")
+
+    assert function.docstring == "Fetch data asynchronously."
+    assert function.source_code == source.strip()
+    assert function.repository == str(tmp_path.resolve())
