@@ -1,3 +1,0 @@
-workflows:
-  - .github/workflows/pre-commit.yml
-  - .github/workflows/translate.yml
