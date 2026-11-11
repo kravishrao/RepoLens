@@ -3,10 +3,10 @@
 # Triggers
 # --------
 # pull_request  – runs on every PR opened, synchronised, or reopened that
-#                 targets the `develop` or `main` branch.
-# push          – runs on direct pushes to `develop` and `main` (integration
-#                 and release branches that are protected in the repository
-#                 settings).
+#                 targets the `develop` branch.  All feature, fix, and CI
+#                 branches merge into `develop`; `develop` is the single
+#                 integration branch for the team.
+# push          – runs on direct pushes to `develop` (e.g. after a PR merge).
 #
 # Jobs
 # ----
@@ -15,9 +15,9 @@
 #
 # Branch-protection note
 # ----------------------
-# Once branch protection is enabled for `develop` and `main`, configure both
-# `Code Quality Checks` and `Test Suite` as required status checks.  Failed
-# checks will then block merging automatically.
+# Configure `develop` branch protection with both `Code Quality Checks` and
+# `Test Suite` as required status checks.  Failed checks will then block
+# merging automatically.  At least 1 approving review is also required.
 
 name: RepoLens CI
 
@@ -25,7 +25,6 @@ on:
   pull_request:
     branches:
       - develop
-      - main
     types:
       - opened
       - synchronize
@@ -34,7 +33,6 @@ on:
   push:
     branches:
       - develop
-      - main
 
 permissions:
   contents: read

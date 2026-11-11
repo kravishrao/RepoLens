@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -113,10 +114,8 @@ class RepositoryMetadataCollector:
         git_metadata = None
 
         # Git metadata is optional. Non-Git repositories remain supported.
-        try:
+        with suppress(InvalidRepositoryError):
             git_metadata = self.repository_loader.load_local(root)
-        except InvalidRepositoryError:
-            pass
 
         repository_source = source or str(root)
 
