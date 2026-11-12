@@ -6,6 +6,7 @@ from repolens.ingestion.ast_parser import (
 )
 from repolens.ingestion.code_unit import (
     CallReference,
+    CodeElementType,
     CodeUnit,
     ImportReference,
 )
@@ -14,6 +15,7 @@ __all__ = [
     "ASTParseError",
     "ASTParseResult",
     "CallReference",
+    "CodeElementType",
     "CodeUnit",
     "ImportReference",
     "PythonASTParser",

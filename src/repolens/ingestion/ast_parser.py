@@ -132,6 +132,15 @@ class PythonASTParser:
 
         return ".".join(parts) or relative_path.stem
 
+    @staticmethod
+    def _get_source_segment(
+        source_lines: list[str],
+        start_line: int,
+        end_line: int,
+    ) -> str:
+        """Extract source code corresponding to a CodeUnit's line range."""
+        return "\n".join(source_lines[start_line - 1 : end_line])
+
     def parse_file(
         self,
         file_path: str | Path,
@@ -199,6 +208,9 @@ class PythonASTParser:
                 ImportReference(module=name)
                 for name in sorted(import_collector.imports)
             ),
+            repository=str(root),
+            source_code=source,
+            docstring=ast.get_docstring(tree),
         )
 
         result.code_units.append(module_unit)
@@ -280,6 +292,13 @@ class PythonASTParser:
                     end_line=end_line,
                     parent_id=parent_id,
                     calls=calls,
+                    repository=str(root),
+                    source_code=self._get_source_segment(
+                        source_lines,
+                        start_line,
+                        end_line,
+                    ),
+                    docstring=ast.get_docstring(child),
                 )
 
                 result.code_units.append(unit)
