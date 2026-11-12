@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -12,6 +13,8 @@ from repolens.ingestion.code_unit import (
 )
 from repolens.ingestion.file_discovery import PythonFileDiscovery
 
+logger = logging.getLogger(__name__)
+
 
 @dataclass(frozen=True)
 class ASTParseError:
@@ -20,21 +23,28 @@ class ASTParseError:
     file_path: str
     error: str
     line_number: int | None = None
+    error_type: str = "ParsingError"
 
 
 @dataclass
 class ASTParseResult:
-    """Store extracted CodeUnits and parsing errors."""
+    """Store extracted CodeUnits, parsing errors, and extraction statistics."""
 
     code_units: list[CodeUnit] = field(default_factory=list)
     errors: list[ASTParseError] = field(default_factory=list)
 
+    files_processed: int = 0
+    files_succeeded: int = 0
+    files_failed: int = 0
+
     @property
     def unit_count(self) -> int:
+        """Return the number of extracted CodeUnits."""
         return len(self.code_units)
 
     @property
     def error_count(self) -> int:
+        """Return the number of recorded parsing errors."""
         return len(self.errors)
 
 
@@ -141,6 +151,53 @@ class PythonASTParser:
         """Extract source code corresponding to a CodeUnit's line range."""
         return "\n".join(source_lines[start_line - 1 : end_line])
 
+    @staticmethod
+    def _validate_source_line_range(
+        unit: CodeUnit,
+        source_line_count: int,
+    ) -> None:
+        """Validate that a CodeUnit's line range fits within its source file."""
+        if unit.start_line < 1:
+            raise ValueError(
+                f"Invalid start line {unit.start_line} for {unit.qualified_name}."
+            )
+
+        if unit.end_line < unit.start_line:
+            raise ValueError(
+                f"Invalid line range for {unit.qualified_name}: "
+                f"{unit.start_line}-{unit.end_line}."
+            )
+
+        if unit.end_line > source_line_count:
+            raise ValueError(
+                f"End line {unit.end_line} exceeds source file length "
+                f"({source_line_count}) for {unit.qualified_name}."
+            )
+
+    @staticmethod
+    def _record_error(
+        result: ASTParseResult,
+        relative_path: str,
+        error: Exception,
+        line_number: int | None = None,
+    ) -> None:
+        """Record and log a file-level extraction failure."""
+        result.errors.append(
+            ASTParseError(
+                file_path=relative_path,
+                error=str(error),
+                line_number=line_number,
+                error_type=type(error).__name__,
+            )
+        )
+
+        logger.warning(
+            "AST extraction failed for %s: %s: %s",
+            relative_path,
+            type(error).__name__,
+            error,
+        )
+
     def parse_file(
         self,
         file_path: str | Path,
@@ -166,24 +223,34 @@ class PythonASTParser:
             ) from exc
 
         result = ASTParseResult()
+        result.files_processed = 1
 
+        # Read and parse the source independently so filesystem and
+        # syntax errors can be reported with useful context.
         try:
             source = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            self._record_error(result, relative_path, exc)
+            result.files_failed = 1
+            return result
+
+        try:
             tree = ast.parse(source, filename=relative_path)
-        except (SyntaxError, UnicodeDecodeError) as exc:
-            result.errors.append(
-                ASTParseError(
-                    file_path=relative_path,
-                    error=str(exc),
-                    line_number=getattr(exc, "lineno", None),
-                )
+        except SyntaxError as exc:
+            self._record_error(
+                result,
+                relative_path,
+                exc,
+                line_number=exc.lineno,
             )
+            result.files_failed = 1
             return result
 
         module_name = self._module_name(Path(relative_path))
         source_lines = source.splitlines()
+        source_line_count = max(1, len(source_lines))
 
-        module_end = max(1, len(source_lines))
+        module_end = source_line_count
         module_id = _make_id(
             relative_path,
             module_name,
@@ -195,6 +262,10 @@ class PythonASTParser:
 
         for statement in tree.body:
             import_collector.visit(statement)
+
+        # Build extracted units locally. They are added to the result only
+        # after the entire file has been processed successfully.
+        extracted_units: list[CodeUnit] = []
 
         module_unit = CodeUnit(
             id=module_id,
@@ -213,7 +284,8 @@ class PythonASTParser:
             docstring=ast.get_docstring(tree),
         )
 
-        result.code_units.append(module_unit)
+        self._validate_source_line_range(module_unit, source_line_count)
+        extracted_units.append(module_unit)
 
         def extract(
             node: ast.AST,
@@ -301,7 +373,8 @@ class PythonASTParser:
                     docstring=ast.get_docstring(child),
                 )
 
-                result.code_units.append(unit)
+                self._validate_source_line_range(unit, source_line_count)
+                extracted_units.append(unit)
 
                 extract(
                     child,
@@ -310,7 +383,21 @@ class PythonASTParser:
                     inside_class=is_class,
                 )
 
-        extract(tree, module_id, module_name)
+        try:
+            extract(tree, module_id, module_name)
+        except Exception as exc:
+            self._record_error(result, relative_path, exc)
+            result.files_failed = 1
+            return result
+
+        result.code_units.extend(extracted_units)
+        result.files_succeeded = 1
+
+        logger.debug(
+            "Successfully extracted %d CodeUnits from %s.",
+            len(extracted_units),
+            relative_path,
+        )
 
         return result
 
@@ -325,13 +412,41 @@ class PythonASTParser:
         combined_result = ASTParseResult()
 
         for relative_path in discovery.files:
-            file_result = self.parse_file(
-                root / relative_path,
-                repository_root=root,
-            )
+            try:
+                file_result = self.parse_file(
+                    root / relative_path,
+                    repository_root=root,
+                )
+            except Exception as exc:
+                # An unexpected failure in one file must not interrupt
+                # extraction of the remaining repository files.
+                file_result = ASTParseResult(
+                    files_processed=1,
+                    files_failed=1,
+                )
+
+                self._record_error(
+                    file_result,
+                    relative_path.as_posix(),
+                    exc,
+                )
 
             combined_result.code_units.extend(file_result.code_units)
             combined_result.errors.extend(file_result.errors)
+
+            combined_result.files_processed += file_result.files_processed
+            combined_result.files_succeeded += file_result.files_succeeded
+            combined_result.files_failed += file_result.files_failed
+
+        logger.info(
+            "Repository AST extraction completed for %s: "
+            "%d processed, %d succeeded, %d failed, %d CodeUnits.",
+            root,
+            combined_result.files_processed,
+            combined_result.files_succeeded,
+            combined_result.files_failed,
+            combined_result.unit_count,
+        )
 
         return combined_result
 
