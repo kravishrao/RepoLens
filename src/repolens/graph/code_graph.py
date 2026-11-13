@@ -30,7 +30,6 @@ class CodeGraph:
     def build(self, code_units: Iterable[CodeUnit]):
         """Build the graph from extracted CodeUnits."""
 
-        # Validate all input before modifying the current graph.
         units = list(code_units)
         validated_units: dict[str, CodeUnit] = {}
 
@@ -45,12 +44,10 @@ class CodeGraph:
 
             validated_units[unit.id] = unit
 
-        # Input is valid. Start building the new graph.
         self._graph.clear()
         self._units = validated_units
         self.unresolved_relationships.clear()
 
-        # Phase 1: Create unique nodes.
         for unit in self._units.values():
             self._graph.add_node(
                 unit.id,
@@ -64,7 +61,6 @@ class CodeGraph:
                 metadata=dict(unit.metadata),
             )
 
-        # Build lookup indexes.
         modules = defaultdict(list)
         qualified_names = defaultdict(list)
         simple_names = defaultdict(list)
@@ -76,7 +72,6 @@ class CodeGraph:
             if unit.kind == "module":
                 modules[self._normalize_module(unit.qualified_name)].append(unit)
 
-        # Phase 2: Structural relationships.
         for unit in self._units.values():
             if unit.parent_id:
                 parent = self._units.get(unit.parent_id)
@@ -91,7 +86,6 @@ class CodeGraph:
                 else:
                     self._add_relationship(parent.id, unit.id, "CONTAINS")
 
-        # Phase 3: Import relationships.
         for unit in self._units.values():
             if unit.kind != "module":
                 continue
@@ -117,7 +111,6 @@ class CodeGraph:
                         "Ambiguous imported module.",
                     )
 
-        # Phase 4: Function and method calls.
         for unit in self._units.values():
             if unit.kind not in {"function", "method"}:
                 continue
@@ -152,6 +145,14 @@ class CodeGraph:
 
         return self
 
+    def get_code_unit(self, code_unit_id: str) -> CodeUnit | None:
+        """Retrieve the original CodeUnit by its identifier."""
+        return self._units.get(code_unit_id)
+
+    def get_code_units(self) -> list[CodeUnit]:
+        """Return all original CodeUnits stored in the graph."""
+        return list(self._units.values())
+
     @staticmethod
     def _normalize_module(module_name: str) -> str:
         return module_name.strip().replace("/", ".").removesuffix(".py")
@@ -164,11 +165,7 @@ class CodeGraph:
     ):
         """Add an edge without duplicating the same relationship."""
 
-        if not self._graph.has_edge(
-            source,
-            target,
-            key=relationship,
-        ):
+        if not self._graph.has_edge(source, target, key=relationship):
             self._graph.add_edge(
                 source,
                 target,
