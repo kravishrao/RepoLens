@@ -13,12 +13,16 @@ description = "Static code-graph analysis for Python repositories."
 requires-python = ">=3.11"
 dependencies = [
     "networkx>=3.2",
+    "langgraph>=1.2,<2.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",
     "ruff>=0.9",
+]
+semantic = [
+    "sentence-transformers>=3.0",
 ]
 
 [tool.setuptools.packages.find]
