@@ -56,6 +56,11 @@ class InvestigationTools:
         self._semantic_retriever = semantic_retriever
 
     @property
+    def code_graph(self) -> CodeGraph:
+        """Return the CodeGraph used by these investigation tools."""
+        return self._code_graph
+
+    @property
     def semantic_available(self) -> bool:
         """Whether a semantic retriever has been configured."""
         return self._semantic_retriever is not None
