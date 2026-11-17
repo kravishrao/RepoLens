@@ -23,6 +23,8 @@ dev = [
 ]
 semantic = [
     "sentence-transformers>=3.0",
+    "faiss-cpu>=1.7.4",
+    "numpy>=1.24.0",
 ]
 
 [tool.setuptools.packages.find]
