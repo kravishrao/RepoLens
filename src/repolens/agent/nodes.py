@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -10,6 +11,7 @@ from repolens.retrieval.bm25_retriever import tokenize
 _GRAPH_TERMS = {
     "call",
     "calls",
+    "called",
     "caller",
     "callers",
     "callee",
@@ -99,7 +101,9 @@ def select_tools(
     if tools.semantic_available:
         retrieval_tools.append("semantic_search")
 
-    pending_retrieval = [name for name in retrieval_tools if name not in executed]
+    pending_retrieval = [
+        name for name in retrieval_tools if name not in executed
+    ]
 
     if pending_retrieval:
         selected.extend(pending_retrieval)
@@ -112,11 +116,103 @@ def select_tools(
     # Phase 2: discover related code units.
     if "graph_traversal" not in executed:
         selected.append("graph_traversal")
+
+        query = state.get(
+            "analyzed_query",
+            state.get("query", ""),
+        )
+
+        query_terms = set(tokenize(query))
+        normalized_query = " ".join(tokenize(query))
+
+        # Detect caller-related questions.
+        caller_phrases = (
+            "who calls",
+            "which functions call",
+            "what calls",
+            "callers of",
+        )
+
+        caller_intent = (
+            any(
+                phrase in normalized_query
+                for phrase in caller_phrases
+            )
+            or bool(query_terms & {"caller", "callers"})
+        )
+
+        # Detect callee-related questions.
+        callee_phrases = (
+            "what functions does",
+            "which functions does",
+            "what does",
+            "which methods does",
+            "callees of",
+            "functions called by",
+        )
+
+        callee_intent = (
+            any(
+                phrase in normalized_query
+                for phrase in callee_phrases
+            )
+            or bool(
+                query_terms
+                & {"callee", "callees", "invoke", "invokes"}
+            )
+        )
+
+        # Generic call questions do not always specify direction.
+        generic_call_intent = bool(
+            query_terms & {"call", "calls", "called"}
+        )
+
+        # Detect dependency and import questions.
+        dependency_terms = {
+            "dependency",
+            "dependencies",
+            "depend",
+            "depends",
+            "import",
+            "imports",
+        }
+
+        # If direction is clear, select the corresponding tool.
+        # Otherwise, generic call questions select both tools.
+        if (
+            caller_intent
+            or (
+                generic_call_intent
+                and not callee_intent
+                and not caller_intent
+            )
+        ) and "get_callers" not in executed:
+            selected.append("get_callers")
+
+        if (
+            callee_intent
+            or (
+                generic_call_intent
+                and not caller_intent
+                and not callee_intent
+            )
+        ) and "get_callees" not in executed:
+            selected.append("get_callees")
+
+        if (
+            query_terms & dependency_terms
+            and "get_dependencies" not in executed
+        ):
+            selected.append("get_dependencies")
+
         return {"selected_tools": selected}
 
-    # Phase 3: inspect all retrieved and graph-discovered code units.
+    # Phase 3: inspect source and read containing files.
     if "inspect_source" not in executed:
         selected.append("inspect_source")
+
+    if "read_file" not in executed:
+        selected.append("read_file")
 
     return {"selected_tools": selected}
 
@@ -126,7 +222,11 @@ def investigate(
     tools: InvestigationTools,
 ) -> dict[str, Any]:
     """Execute selected tools and determine the next investigation state."""
-    query = state.get("analyzed_query", state.get("query", ""))
+    query = state.get(
+        "analyzed_query",
+        state.get("query", ""),
+    )
+
     selected = state.get("selected_tools", [])
     evidence = state.get("evidence", [])
     executed = list(state.get("executed_tools", []))
@@ -138,7 +238,9 @@ def investigate(
     # Capture all code units already discovered before this iteration.
     known_unit_ids = list(
         dict.fromkeys(
-            str(item["code_unit_id"]) for item in evidence if item.get("code_unit_id")
+            str(item["code_unit_id"])
+            for item in evidence
+            if item.get("code_unit_id")
         )
     )
 
@@ -156,13 +258,52 @@ def investigate(
                     max_depth=2,
                 )
 
+            elif tool_name in {
+                "get_callers",
+                "get_callees",
+                "get_dependencies",
+            }:
+                results = []
+
+                for unit_id in known_unit_ids:
+                    if tool_name == "get_callers":
+                        results.extend(
+                            tools.get_callers(unit_id)
+                        )
+
+                    elif tool_name == "get_callees":
+                        results.extend(
+                            tools.get_callees(unit_id)
+                        )
+
+                    else:
+                        results.extend(
+                            tools.get_dependencies(unit_id)
+                        )
+
             elif tool_name == "inspect_source":
-                # This phase runs after graph traversal, so known_unit_ids
-                # includes code units discovered through graph relationships.
                 results = tools.inspect_source(known_unit_ids)
 
+            elif tool_name == "read_file":
+                file_paths = list(
+                    dict.fromkeys(
+                        str(item["file_path"])
+                        for item in evidence
+                        if item.get("file_path")
+                    )
+                )
+
+                results = []
+
+                for file_path in file_paths:
+                    results.extend(
+                        tools.read_file(file_path)
+                    )
+
             else:
-                raise ValueError(f"Unknown investigation tool: {tool_name}")
+                raise ValueError(
+                    f"Unknown investigation tool: {tool_name}"
+                )
 
             results = list(results)
             new_evidence.extend(results)
@@ -181,7 +322,9 @@ def investigate(
                 {
                     "tool": tool_name,
                     "error": str(exc),
-                    "iteration": str(state.get("iteration", 0) + 1),
+                    "iteration": str(
+                        state.get("iteration", 0) + 1
+                    ),
                 }
             )
 
@@ -203,7 +346,9 @@ def investigate(
     max_evidence = state.get("max_evidence", 30)
 
     # Deduplicate against existing evidence and within this iteration.
-    existing_ids = {item.get("evidence_id") for item in evidence}
+    existing_ids = {
+        item.get("evidence_id") for item in evidence
+    }
 
     seen_ids = set(existing_ids)
     unique_new_evidence: list[dict[str, object]] = []
@@ -241,11 +386,14 @@ def investigate(
         ]
 
         successful_retrieval = any(
-            record.get("tool") in retrieval_tools and record.get("status") == "success"
+            record.get("tool") in retrieval_tools
+            and record.get("status") == "success"
             for record in retrieval_history
         )
 
-        termination_reason = "no_evidence" if successful_retrieval else "tool_failures"
+        termination_reason = (
+            "no_evidence" if successful_retrieval else "tool_failures"
+        )
         needs_more = False
 
     elif evidence_count >= max_evidence:
@@ -260,6 +408,7 @@ def investigate(
         retrieval_finished
         and "graph_traversal" in executed
         and "inspect_source" in executed
+        and "read_file" in executed
     ):
         termination_reason = "investigation_completed"
         needs_more = False
@@ -281,7 +430,9 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
     errors = state.get("errors", [])
 
     if not evidence:
-        answer = "No relevant code evidence was found for this repository question."
+        answer = (
+            "No relevant code evidence was found for this repository question."
+        )
 
         if errors:
             answer += "\n\nInvestigation errors:"
@@ -296,7 +447,9 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
             "final_answer": answer,
             "is_complete": True,
             "needs_more_investigation": False,
-            "termination_reason": (state.get("termination_reason") or "no_evidence"),
+            "termination_reason": (
+                state.get("termination_reason") or "no_evidence"
+            ),
         }
 
     grouped: dict[str, list[dict[str, object]]] = {}
@@ -341,10 +494,15 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
         )
 
         sources = list(
-            dict.fromkeys(str(record.get("source", "unknown")) for record in records)
+            dict.fromkeys(
+                str(record.get("source", "unknown"))
+                for record in records
+            )
         )
 
-        lines.append(f"   Evidence sources: {', '.join(sources)}")
+        lines.append(
+            f"   Evidence sources: {', '.join(sources)}"
+        )
 
         contents = list(
             dict.fromkeys(

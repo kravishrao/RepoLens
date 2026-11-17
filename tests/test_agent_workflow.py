@@ -6,7 +6,7 @@ from repolens.agent import InvestigationTools, investigate_repository
 from repolens.agent.nodes import analyze_query
 from repolens.agent.state import InvestigationState
 from repolens.graph.code_graph import CodeGraph
-from repolens.ingestion.code_unit import CallReference, CodeUnit
+from repolens.ingestion.code_unit import CallReference, CodeUnit, ImportReference
 from repolens.retrieval.semantic_retriever import SemanticSearchResult
 
 
@@ -92,6 +92,105 @@ def test_graph_traversal_finds_callers(
     assert len(results) == 1
     assert results[0]["code_unit_id"] == "unit-2"
     assert results[0]["metadata"]["relationship"] == "CALLS"
+
+
+
+def test_get_callers_returns_structured_evidence(
+    investigation_tools: InvestigationTools,
+) -> None:
+    results = investigation_tools.get_callers("unit-1")
+
+    assert len(results) == 1
+    assert results[0]["code_unit_id"] == "unit-2"
+    assert results[0]["source"] == "get_callers"
+    assert results[0]["metadata"]["relationship"] == "CALLS"
+
+
+def test_get_callees_returns_structured_evidence(
+    investigation_tools: InvestigationTools,
+) -> None:
+    results = investigation_tools.get_callees("unit-2")
+
+    assert len(results) == 1
+    assert results[0]["code_unit_id"] == "unit-1"
+    assert results[0]["source"] == "get_callees"
+
+
+def test_get_dependencies_returns_module_evidence(tmp_path) -> None:
+    module_a = CodeUnit(
+        id="module-a",
+        kind="module",
+        name="a.py",
+        qualified_name="a",
+        file_path="a.py",
+        start_line=1,
+        end_line=1,
+        imports=(ImportReference(module="b"),),
+        repository=str(tmp_path),
+        source_code="import b\n",
+    )
+    module_b = CodeUnit(
+        id="module-b",
+        kind="module",
+        name="b.py",
+        qualified_name="b",
+        file_path="b.py",
+        start_line=1,
+        end_line=1,
+        repository=str(tmp_path),
+        source_code="VALUE = 1\n",
+    )
+    units = [module_a, module_b]
+    tools = InvestigationTools(units, CodeGraph().build(units))
+
+    results = tools.get_dependencies("module-a")
+
+    assert len(results) == 1
+    assert results[0]["code_unit_id"] == "module-b"
+    assert results[0]["source"] == "get_dependencies"
+
+
+def test_read_file_returns_requested_source_range(tmp_path) -> None:
+    source = "def first():\n    return 1\n\ndef second():\n    return 2\n"
+    (tmp_path / "sample.py").write_text(source, encoding="utf-8")
+    module = CodeUnit(
+        id="module-sample",
+        kind="module",
+        name="sample.py",
+        qualified_name="sample",
+        file_path="sample.py",
+        start_line=1,
+        end_line=6,
+        repository=str(tmp_path),
+        source_code=source,
+    )
+    tools = InvestigationTools([module], CodeGraph().build([module]))
+
+    results = tools.read_file("sample.py", start_line=2, end_line=4)
+
+    assert len(results) == 1
+    assert results[0]["source"] == "read_file"
+    assert results[0]["content"] == "    return 1\n\ndef second():"
+    assert results[0]["start_line"] == 2
+    assert results[0]["end_line"] == 4
+
+
+def test_read_file_rejects_path_traversal(tmp_path) -> None:
+    module = CodeUnit(
+        id="module-sample",
+        kind="module",
+        name="sample.py",
+        qualified_name="sample",
+        file_path="sample.py",
+        start_line=1,
+        end_line=1,
+        repository=str(tmp_path),
+        source_code="VALUE = 1\n",
+    )
+    tools = InvestigationTools([module], CodeGraph().build([module]))
+
+    with pytest.raises(ValueError, match="parent traversal"):
+        tools.read_file("../outside.py")
 
 
 def test_source_inspection_returns_source_and_docstring(
@@ -200,7 +299,9 @@ def test_workflow_completes_repository_investigation(
 
     assert "keyword_search" in executed
     assert "graph_traversal" in executed
+    assert "get_callers" in executed
     assert "inspect_source" in executed
+    assert "read_file" in executed
 
     assert result["termination_reason"] == "investigation_completed"
 
