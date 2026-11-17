@@ -376,3 +376,146 @@ def test_tools_reject_mismatched_repository_data(
             code_units=repository_units,
             code_graph=graph,
         )
+
+
+# RL-30: Investigation tracing and execution control tests.
+
+
+def test_workflow_records_execution_trace(
+    investigation_tools: InvestigationTools,
+) -> None:
+    result = investigate_repository(
+        "Find calculate_total and its callers",
+        investigation_tools,
+    )
+
+    trace = result["trace"]
+
+    assert trace
+    assert len(trace) == len(result["history"])
+
+    for record in trace:
+        assert record["invocation_id"]
+        assert record["iteration"] >= 1
+        assert record["tool"]
+        assert record["status"] in {"success", "failed"}
+        assert record["duration_ms"] >= 0
+        assert record["result_count"] >= 0
+        assert isinstance(record["findings"], list)
+        assert "error" in record
+
+    invocation_ids = [record["invocation_id"] for record in trace]
+
+    assert len(invocation_ids) == len(set(invocation_ids))
+
+
+def test_execution_trace_records_successful_tool_findings(
+    investigation_tools: InvestigationTools,
+) -> None:
+    result = investigate_repository(
+        "Find calculate_total and its callers",
+        investigation_tools,
+    )
+
+    keyword_trace = next(
+        record for record in result["trace"] if record["tool"] == "keyword_search"
+    )
+
+    assert keyword_trace["status"] == "success"
+    assert keyword_trace["result_count"] > 0
+    assert keyword_trace["findings"]
+    assert keyword_trace["error"] is None
+
+
+def test_execution_trace_records_tool_failures(
+    repository_units: list[CodeUnit],
+) -> None:
+    class FailingSemanticRetriever:
+        def query(
+            self,
+            query_text: str,
+            *,
+            top_k: int = 10,
+        ) -> list[CodeUnit]:
+            raise RuntimeError("Semantic service unavailable")
+
+    graph = CodeGraph().build(repository_units)
+
+    tools = InvestigationTools(
+        code_units=repository_units,
+        code_graph=graph,
+        semantic_retriever=FailingSemanticRetriever(),
+    )
+
+    result = investigate_repository("Find calculate_total", tools)
+
+    semantic_trace = next(
+        record for record in result["trace"] if record["tool"] == "semantic_search"
+    )
+
+    assert semantic_trace["status"] == "failed"
+    assert semantic_trace["result_count"] == 0
+    assert semantic_trace["findings"] == []
+    assert "Semantic service unavailable" in semantic_trace["error"]
+
+
+def test_workflow_supports_configurable_minimum_evidence(
+    investigation_tools: InvestigationTools,
+) -> None:
+    result = investigate_repository(
+        "Find calculate_total and its callers",
+        investigation_tools,
+        min_evidence=1,
+    )
+
+    assert result["is_complete"] is True
+    assert len(result["evidence"]) >= 1
+    assert result["termination_reason"] == "sufficient_evidence"
+
+
+def test_workflow_preserves_default_completion_reason(
+    investigation_tools: InvestigationTools,
+) -> None:
+    result = investigate_repository(
+        "Find calculate_total and its callers",
+        investigation_tools,
+    )
+
+    assert result["termination_reason"] == "investigation_completed"
+
+
+def test_workflow_rejects_invalid_minimum_evidence(
+    investigation_tools: InvestigationTools,
+) -> None:
+    with pytest.raises(ValueError, match="non-negative integer"):
+        investigate_repository(
+            "Find calculate_total",
+            investigation_tools,
+            min_evidence=-1,
+        )
+
+
+def test_workflow_rejects_minimum_evidence_above_maximum(
+    investigation_tools: InvestigationTools,
+) -> None:
+    with pytest.raises(ValueError, match="cannot exceed max_evidence"):
+        investigate_repository(
+            "Find calculate_total",
+            investigation_tools,
+            min_evidence=5,
+            max_evidence=4,
+        )
+
+
+def test_workflow_includes_execution_trace_in_final_answer(
+    investigation_tools: InvestigationTools,
+) -> None:
+    result = investigate_repository(
+        "Find calculate_total and its callers",
+        investigation_tools,
+    )
+
+    assert "Execution Trace" in result["final_answer"]
+    assert "keyword_search" in result["final_answer"]
+    assert "graph_traversal" in result["final_answer"]
+    assert "inspect_source" in result["final_answer"]

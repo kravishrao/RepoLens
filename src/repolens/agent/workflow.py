@@ -60,6 +60,7 @@ def investigate_repository(
     *,
     max_iterations: int = 4,
     max_evidence: int = 30,
+    min_evidence: int = 0,
 ) -> InvestigationState:
     """Run a repository investigation and return its final state."""
     if not isinstance(query, str) or not query.strip():
@@ -79,6 +80,16 @@ def investigate_repository(
     ):
         raise ValueError("max_evidence must be a positive integer.")
 
+    if (
+        not isinstance(min_evidence, int)
+        or isinstance(min_evidence, bool)
+        or min_evidence < 0
+    ):
+        raise ValueError("min_evidence must be a non-negative integer.")
+
+    if min_evidence > max_evidence:
+        raise ValueError("min_evidence cannot exceed max_evidence.")
+
     app = build_investigation_workflow(tools)
 
     initial_state: InvestigationState = {
@@ -86,11 +97,13 @@ def investigate_repository(
         "evidence": [],
         "errors": [],
         "history": [],
+        "trace": [],
         "executed_tools": [],
         "selected_tools": [],
         "iteration": 0,
         "max_iterations": max_iterations,
         "max_evidence": max_evidence,
+        "min_evidence": min_evidence,
         "needs_more_investigation": True,
         "is_complete": False,
     }
