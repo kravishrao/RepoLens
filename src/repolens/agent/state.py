@@ -40,7 +40,7 @@ def merge_trace(
     existing: list[dict[str, object]],
     new: list[dict[str, object]],
 ) -> list[dict[str, object]]:
-    """Append structured investigation trace records."""
+    """Append investigation execution trace."""
     return [*existing, *new]
 
 
@@ -48,7 +48,6 @@ class InvestigationState(TypedDict, total=False):
     """Shared state maintained throughout an investigation workflow."""
 
     query: str
-
     analyzed_query: str
     query_keywords: list[str]
     investigation_goals: list[str]
@@ -58,25 +57,10 @@ class InvestigationState(TypedDict, total=False):
     selected_tools: list[str]
     executed_tools: list[str]
 
-    evidence: Annotated[
-        list[dict[str, object]],
-        merge_evidence,
-    ]
-
-    history: Annotated[
-        list[dict[str, object]],
-        merge_history,
-    ]
-
-    trace: Annotated[
-        list[dict[str, object]],
-        merge_trace,
-    ]
-
-    errors: Annotated[
-        list[dict[str, str]],
-        merge_errors,
-    ]
+    evidence: Annotated[list[dict[str, object]], merge_evidence]
+    history: Annotated[list[dict[str, object]], merge_history]
+    trace: Annotated[list[dict[str, object]], merge_trace]
+    errors: Annotated[list[dict[str, str]], merge_errors]
 
     iteration: int
     max_iterations: int
@@ -87,3 +71,8 @@ class InvestigationState(TypedDict, total=False):
 
     final_answer: str
     termination_reason: str
+
+    # RL-32: structured source and claim validation output.
+    citation_validation_results: list[dict[str, object]]
+    claim_validation_results: list[dict[str, object]]
+    validation_summary: dict[str, object]
