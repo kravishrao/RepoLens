@@ -36,46 +36,54 @@ def merge_history(
     return [*existing, *new]
 
 
+def merge_trace(
+    existing: list[dict[str, object]],
+    new: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Append structured investigation trace records."""
+    return [*existing, *new]
+
+
 class InvestigationState(TypedDict, total=False):
     """Shared state maintained throughout an investigation workflow."""
 
-    # Original repository-level question.
     query: str
 
-    # Results of query analysis.
     analyzed_query: str
     query_keywords: list[str]
     investigation_goals: list[str]
+    requires_graph_traversal: bool
+    requires_source_inspection: bool
 
-    # Tool execution planning.
     selected_tools: list[str]
     executed_tools: list[str]
 
-    # Accumulated investigation evidence.
     evidence: Annotated[
         list[dict[str, object]],
         merge_evidence,
     ]
 
-    # Investigation execution history.
     history: Annotated[
         list[dict[str, object]],
         merge_history,
     ]
 
-    # Tool failures are recorded without crashing the workflow.
+    trace: Annotated[
+        list[dict[str, object]],
+        merge_trace,
+    ]
+
     errors: Annotated[
         list[dict[str, str]],
         merge_errors,
     ]
 
-    # Iteration and termination controls.
     iteration: int
     max_iterations: int
     max_evidence: int
+    min_evidence: int
     needs_more_investigation: bool
     is_complete: bool
 
-    # Final response.
     final_answer: str
     termination_reason: str
