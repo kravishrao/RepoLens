@@ -1,4 +1,3 @@
-﻿
 from __future__ import annotations
 
 from collections import Counter
@@ -38,9 +37,7 @@ def _get_overall_validation_status(
     if not citation_results:
         return "incomplete"
 
-    statuses = [
-        result.status for result in citation_results
-    ] + [
+    statuses = [result.status for result in citation_results] + [
         result.status for result in claim_results
     ]
 
