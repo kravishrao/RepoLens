@@ -11,6 +11,14 @@ from repolens.retrieval.hybrid_retriever import (
     reciprocal_rank_fusion,
     weighted_score_fusion,
 )
+from repolens.retrieval.reranker import (
+    CodeUnitReranker,
+    CrossEncoderProvider,
+    RerankerProvider,
+    RerankingError,
+    RerankResult,
+    SymbolAwareRerankerProvider,
+)
 from repolens.retrieval.semantic_retriever import (
     EmbeddingError,
     EmbeddingProvider,
@@ -24,6 +32,8 @@ from repolens.retrieval.semantic_retriever import (
 
 __all__ = [
     "BM25Retriever",
+    "CodeUnitReranker",
+    "CrossEncoderProvider",
     "EmbeddingError",
     "EmbeddingProvider",
     "EmbeddingSemanticRetriever",
@@ -31,9 +41,13 @@ __all__ = [
     "HybridRetriever",
     "HybridSearchResult",
     "InMemoryVectorStore",
+    "RerankResult",
+    "RerankerProvider",
+    "RerankingError",
     "RetrievalResult",
     "SemanticSearchResult",
     "SentenceTransformerProvider",
+    "SymbolAwareRerankerProvider",
     "VectorStore",
     "fuse_retrieval_results",
     "preprocess",
