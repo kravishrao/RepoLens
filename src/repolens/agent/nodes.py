@@ -5,6 +5,7 @@ from time import perf_counter
 from typing import Any
 from uuid import uuid4
 
+from repolens.agent.answer_generator import AnswerGenerator
 from repolens.agent.state import InvestigationState
 from repolens.agent.tools import InvestigationTools
 from repolens.retrieval.bm25_retriever import tokenize
@@ -453,129 +454,8 @@ def _append_execution_trace(
 
 def prepare_answer(state: InvestigationState) -> dict[str, Any]:
     """Prepare a structured answer grounded in collected repository evidence."""
-    evidence = state.get("evidence", [])
-    errors = state.get("errors", [])
-    trace = state.get("trace", [])
-
-    if not evidence:
-        answer = "No relevant code evidence was found for this repository question."
-
-        if errors:
-            answer += "\n\nInvestigation errors:"
-
-            for error in errors:
-                answer += (
-                    f"\n- {error.get('tool', 'unknown')}: "
-                    f"{error.get('error', 'Unknown error')}"
-                )
-
-        answer_lines = answer.splitlines()
-        _append_execution_trace(answer_lines, trace)
-        answer = "\n".join(answer_lines)
-
-        return {
-            "final_answer": answer,
-            "is_complete": True,
-            "needs_more_investigation": False,
-            "termination_reason": (state.get("termination_reason") or "no_evidence"),
-        }
-
-    grouped: dict[str, list[dict[str, object]]] = {}
-
-    for item in evidence:
-        unit_id = str(item.get("code_unit_id", "unknown"))
-        grouped.setdefault(unit_id, []).append(item)
-
-    lines = [
-        "Repository Investigation",
-        "========================",
-        "",
-        f"Question: {state.get('query', '')}",
-        "",
-        f"Unique code elements investigated: {len(grouped)}",
-        f"Total evidence records: {len(evidence)}",
-        "",
-        "Findings",
-        "--------",
-    ]
-
-    for index, records in enumerate(grouped.values(), start=1):
-        primary = records[0]
-
-        name = primary.get(
-            "qualified_name",
-            primary.get("name", "Unknown"),
-        )
-
-        lines.extend(
-            [
-                "",
-                f"{index}. {name}",
-                f"   Type: {primary.get('kind', 'unknown')}",
-                f"   File: {primary.get('file_path', 'unknown')}",
-                (
-                    "   Lines: "
-                    f"{primary.get('start_line', '?')}-"
-                    f"{primary.get('end_line', '?')}"
-                ),
-            ]
-        )
-
-        sources = list(
-            dict.fromkeys(str(record.get("source", "unknown")) for record in records)
-        )
-
-        lines.append(f"   Evidence sources: {', '.join(sources)}")
-
-        contents = list(
-            dict.fromkeys(
-                str(record.get("content", "")).strip()
-                for record in records
-                if record.get("content")
-            )
-        )
-
-        for content in contents[:1]:
-            lines.append("   Source evidence:")
-
-            for source_line in content.splitlines()[:20]:
-                lines.append(f"      {source_line}")
-
-        for record in records:
-            metadata = record.get("metadata", {})
-
-            if isinstance(metadata, dict):
-                docstring = metadata.get("docstring")
-
-                if docstring:
-                    lines.append(f"   Docstring: {docstring}")
-                    break
-
-    if errors:
-        lines.extend(
-            [
-                "",
-                "Investigation warnings",
-                "----------------------",
-            ]
-        )
-
-        for error in errors:
-            lines.append(
-                f"- {error.get('tool', 'unknown')}: "
-                f"{error.get('error', 'Unknown error')}"
-            )
-
-    _append_execution_trace(lines, trace)
-
-    return {
-        "final_answer": "\n".join(lines),
-        "is_complete": True,
-        "needs_more_investigation": False,
-        "termination_reason": (
-            state.get("termination_reason") or "investigation_completed"
-        ),
-    }
+    generator = AnswerGenerator()
+    return generator.generate_from_state(state)
 
 
 def create_nodes(
