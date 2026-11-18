@@ -94,7 +94,6 @@ def test_graph_traversal_finds_callers(
     assert results[0]["metadata"]["relationship"] == "CALLS"
 
 
-
 def test_get_callers_returns_structured_evidence(
     investigation_tools: InvestigationTools,
 ) -> None:

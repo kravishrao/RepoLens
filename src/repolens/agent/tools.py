@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Iterable
@@ -61,9 +60,7 @@ class InvestigationTools:
         # AST ingestion stores the repository root on every CodeUnit. Allow an
         # explicit override for callers that construct CodeUnits themselves.
         inferred_roots = {
-            Path(unit.repository).resolve()
-            for unit in units
-            if unit.repository
+            Path(unit.repository).resolve() for unit in units if unit.repository
         }
         if repository_root is not None:
             self._repository_root = Path(repository_root).resolve()
@@ -238,17 +235,11 @@ class InvestigationTools:
             raise ValueError("start_line must be a positive integer.")
 
         if end_line is not None and (
-            not isinstance(end_line, int)
-            or isinstance(end_line, bool)
-            or end_line < 1
+            not isinstance(end_line, int) or isinstance(end_line, bool) or end_line < 1
         ):
             raise ValueError("end_line must be a positive integer.")
 
-        if (
-            start_line is not None
-            and end_line is not None
-            and end_line < start_line
-        ):
+        if start_line is not None and end_line is not None and end_line < start_line:
             raise ValueError("end_line cannot be before start_line.")
 
         relative_path = Path(file_path)
@@ -261,8 +252,7 @@ class InvestigationTools:
         module_units = [
             unit
             for unit in self._code_units.values()
-            if unit.kind == "module"
-            and Path(unit.file_path) == relative_path
+            if unit.kind == "module" and Path(unit.file_path) == relative_path
         ]
         module_unit = module_units[0] if module_units else None
 
@@ -297,23 +287,18 @@ class InvestigationTools:
         if first > len(lines):
             return []
 
-        selected = lines[first - 1:last]
+        selected = lines[first - 1 : last]
         selected_content = "\n".join(selected)
 
         if content.endswith("\n") and last == len(lines):
             selected_content += "\n"
 
-        unit_id = (
-            module_unit.id
-            if module_unit
-            else f"file:{relative_path.as_posix()}"
-        )
+        unit_id = module_unit.id if module_unit else f"file:{relative_path.as_posix()}"
 
         return [
             {
                 "evidence_id": (
-                    f"file:{relative_path.as_posix()}:"
-                    f"{first}-{min(last, len(lines))}"
+                    f"file:{relative_path.as_posix()}:{first}-{min(last, len(lines))}"
                 ),
                 "source": "read_file",
                 "code_unit_id": unit_id,
