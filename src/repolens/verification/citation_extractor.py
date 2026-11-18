@@ -44,15 +44,11 @@ _SOURCE_EXTENSIONS = (
 
 _EXTENSION_PATTERN = "|".join(_SOURCE_EXTENSIONS)
 
-_FILE_PATTERN = (
-    rf"(?:[\w.@+-]+[\\/])*"
-    rf"[\w.@+-]+\.(?:{_EXTENSION_PATTERN})"
-)
+_FILE_PATTERN = rf"(?:[\w.@+-]+[\\/])*" rf"[\w.@+-]+\.(?:{_EXTENSION_PATTERN})"
 
 _PATTERNS = (
     re.compile(
-        rf"(?P<path>{_FILE_PATTERN})\s*:\s*"
-        r"(?P<start>\d+)(?:\s*-\s*(?P<end>\d+))?",
+        rf"(?P<path>{_FILE_PATTERN})\s*:\s*" r"(?P<start>\d+)(?:\s*-\s*(?P<end>\d+))?",
         re.IGNORECASE,
     ),
     re.compile(

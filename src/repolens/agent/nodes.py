@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from collections.abc import Callable
@@ -55,9 +54,8 @@ def analyze_query(state: InvestigationState) -> dict[str, Any]:
     keywords = list(dict.fromkeys(tokenize(query)))
     keyword_set = set(keywords)
 
-    graph_intent = (
-        bool(keyword_set & _GRAPH_TERMS)
-        or bool(_requested_relationship_tools(query))
+    graph_intent = bool(keyword_set & _GRAPH_TERMS) or bool(
+        _requested_relationship_tools(query)
     )
     source_intent = bool(keyword_set & _SOURCE_TERMS)
 
@@ -95,21 +93,26 @@ def _requested_relationship_tools(query: str) -> list[str]:
     normalized_query = " ".join(tokenize(query))
 
     caller_phrases = (
-        "who calls", "which functions call", "what calls", "callers of",
+        "who calls",
+        "which functions call",
+        "what calls",
+        "callers of",
     )
     callee_phrases = (
-        "what functions does", "which functions does", "what does",
-        "which methods does", "callees of", "functions called by",
+        "what functions does",
+        "which functions does",
+        "what does",
+        "which methods does",
+        "callees of",
+        "functions called by",
     )
 
-    caller_intent = (
-        any(phrase in normalized_query for phrase in caller_phrases)
-        or bool(query_terms & {"caller", "callers"})
-    )
-    callee_intent = (
-        any(phrase in normalized_query for phrase in callee_phrases)
-        or bool(query_terms & {"callee", "callees", "invoke", "invokes"})
-    )
+    caller_intent = any(
+        phrase in normalized_query for phrase in caller_phrases
+    ) or bool(query_terms & {"caller", "callers"})
+    callee_intent = any(
+        phrase in normalized_query for phrase in callee_phrases
+    ) or bool(query_terms & {"callee", "callees", "invoke", "invokes"})
     generic_call_intent = bool(query_terms & {"call", "calls", "called"})
 
     requested: list[str] = []
@@ -122,7 +125,12 @@ def _requested_relationship_tools(query: str) -> list[str]:
     ):
         requested.append("get_callees")
     if query_terms & {
-        "dependency", "dependencies", "depend", "depends", "import", "imports"
+        "dependency",
+        "dependencies",
+        "depend",
+        "depends",
+        "import",
+        "imports",
     }:
         requested.append("get_dependencies")
     return requested
@@ -145,9 +153,7 @@ def select_tools(
     if tools.semantic_available:
         retrieval_tools.append("semantic_search")
 
-    pending_retrieval = [
-        name for name in retrieval_tools if name not in executed
-    ]
+    pending_retrieval = [name for name in retrieval_tools if name not in executed]
     if pending_retrieval:
         return {"selected_tools": pending_retrieval}
 
@@ -167,8 +173,7 @@ def select_tools(
             selected.append("graph_traversal")
         if graph_required:
             selected.extend(
-                name for name in requested_relationship_tools
-                if name not in executed
+                name for name in requested_relationship_tools if name not in executed
             )
         if source_required:
             if "inspect_source" not in executed:
@@ -182,8 +187,7 @@ def select_tools(
     if "graph_traversal" not in executed:
         selected = ["graph_traversal"]
         selected.extend(
-            name for name in requested_relationship_tools
-            if name not in executed
+            name for name in requested_relationship_tools if name not in executed
         )
         return {"selected_tools": selected}
 
@@ -200,7 +204,6 @@ def select_tools(
         return {"selected_tools": ["read_file"]}
 
     return {"selected_tools": []}
-
 
 
 def investigate(
@@ -222,9 +225,7 @@ def investigate(
     iteration = state.get("iteration", 0) + 1
     known_unit_ids = list(
         dict.fromkeys(
-            str(item["code_unit_id"])
-            for item in evidence
-            if item.get("code_unit_id")
+            str(item["code_unit_id"]) for item in evidence if item.get("code_unit_id")
         )
     )
 
@@ -240,7 +241,9 @@ def investigate(
             elif tool_name == "graph_traversal":
                 results = tools.graph_traversal(known_unit_ids, max_depth=2)
             elif tool_name in {
-                "get_callers", "get_callees", "get_dependencies",
+                "get_callers",
+                "get_callees",
+                "get_dependencies",
             }:
                 results = []
                 for unit_id in known_unit_ids:
@@ -268,9 +271,7 @@ def investigate(
 
             results = list(results)
             new_evidence.extend(results)
-            result_ids = [
-                str(item.get("evidence_id", "unknown")) for item in results
-            ]
+            result_ids = [str(item.get("evidence_id", "unknown")) for item in results]
             new_history.append(
                 {
                     "iteration": iteration,
@@ -287,9 +288,7 @@ def investigate(
                     "iteration": iteration,
                     "tool": tool_name,
                     "status": "success",
-                    "duration_ms": round(
-                        (perf_counter() - started_at) * 1000, 3
-                    ),
+                    "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                     "result_count": len(results),
                     "findings": result_ids,
                     "retained_count": 0,
@@ -319,9 +318,7 @@ def investigate(
                     "iteration": iteration,
                     "tool": tool_name,
                     "status": "failed",
-                    "duration_ms": round(
-                        (perf_counter() - started_at) * 1000, 3
-                    ),
+                    "duration_ms": round((perf_counter() - started_at) * 1000, 3),
                     "result_count": 0,
                     "findings": [],
                     "retained_count": 0,
@@ -346,9 +343,7 @@ def investigate(
     remaining_capacity = max(0, max_evidence - len(evidence))
     unique_new_evidence = unique_new_evidence[:remaining_capacity]
 
-    retained_ids = {
-        item.get("evidence_id") for item in unique_new_evidence
-    }
+    retained_ids = {item.get("evidence_id") for item in unique_new_evidence}
     for trace_index, results in tool_result_groups:
         retained_findings: list[str] = []
         for item in results:
@@ -371,17 +366,14 @@ def investigate(
     requested_relationship_tools = _requested_relationship_tools(query)
 
     required_phases_finished = (
-        (
-            not graph_required
-            or (
-                "graph_traversal" in executed
-                and all(name in executed for name in requested_relationship_tools)
-            )
+        not graph_required
+        or (
+            "graph_traversal" in executed
+            and all(name in executed for name in requested_relationship_tools)
         )
-        and (
-            not source_required
-            or ("inspect_source" in executed and "read_file" in executed)
-        )
+    ) and (
+        not source_required
+        or ("inspect_source" in executed and "read_file" in executed)
     )
 
     termination_reason = ""
@@ -401,13 +393,10 @@ def investigate(
     elif evidence_count == 0 and retrieval_finished:
         retrieval_history = [*state.get("history", []), *new_history]
         successful_retrieval = any(
-            record.get("tool") in retrieval_tools
-            and record.get("status") == "success"
+            record.get("tool") in retrieval_tools and record.get("status") == "success"
             for record in retrieval_history
         )
-        termination_reason = (
-            "no_evidence" if successful_retrieval else "tool_failures"
-        )
+        termination_reason = "no_evidence" if successful_retrieval else "tool_failures"
         needs_more = False
     elif (
         retrieval_finished
@@ -434,7 +423,6 @@ def investigate(
         "needs_more_investigation": needs_more,
         "termination_reason": termination_reason,
     }
-
 
 
 def _append_execution_trace(
@@ -470,9 +458,7 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
     trace = state.get("trace", [])
 
     if not evidence:
-        answer = (
-            "No relevant code evidence was found for this repository question."
-        )
+        answer = "No relevant code evidence was found for this repository question."
 
         if errors:
             answer += "\n\nInvestigation errors:"
@@ -491,9 +477,7 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
             "final_answer": answer,
             "is_complete": True,
             "needs_more_investigation": False,
-            "termination_reason": (
-                state.get("termination_reason") or "no_evidence"
-            ),
+            "termination_reason": (state.get("termination_reason") or "no_evidence"),
         }
 
     grouped: dict[str, list[dict[str, object]]] = {}
@@ -538,15 +522,10 @@ def prepare_answer(state: InvestigationState) -> dict[str, Any]:
         )
 
         sources = list(
-            dict.fromkeys(
-                str(record.get("source", "unknown"))
-                for record in records
-            )
+            dict.fromkeys(str(record.get("source", "unknown")) for record in records)
         )
 
-        lines.append(
-            f"   Evidence sources: {', '.join(sources)}"
-        )
+        lines.append(f"   Evidence sources: {', '.join(sources)}")
 
         contents = list(
             dict.fromkeys(

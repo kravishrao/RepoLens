@@ -7,9 +7,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 _SCP_SSH_URL_PATTERN = re.compile(
-    r"^(?P<username>[^@/:\s]+)@"
-    r"(?P<host>[^/:\s]+):"
-    r"(?P<path>[^\s]+)$"
+    r"^(?P<username>[^@/:\s]+)@" r"(?P<host>[^/:\s]+):" r"(?P<path>[^\s]+)$"
 )
 
 
