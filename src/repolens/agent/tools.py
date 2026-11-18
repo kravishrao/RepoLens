@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Protocol
 
 from repolens.graph.code_graph import CodeGraph
@@ -31,6 +32,7 @@ class InvestigationTools:
         code_units: Iterable[CodeUnit],
         code_graph: CodeGraph,
         semantic_retriever: SemanticRetriever | None = None,
+        repository_root: str | Path | None = None,
     ) -> None:
         units = list(code_units)
 
@@ -54,6 +56,18 @@ class InvestigationTools:
         self._graph_query = GraphQuery(code_graph)
         self._keyword_retriever = BM25Retriever(units)
         self._semantic_retriever = semantic_retriever
+
+        # AST ingestion stores the repository root on every CodeUnit. Allow an
+        # explicit override for callers that construct CodeUnits themselves.
+        inferred_roots = {
+            Path(unit.repository).resolve() for unit in units if unit.repository
+        }
+        if repository_root is not None:
+            self._repository_root = Path(repository_root).resolve()
+        elif len(inferred_roots) == 1:
+            self._repository_root = inferred_roots.pop()
+        else:
+            self._repository_root = None
 
     @property
     def code_graph(self) -> CodeGraph:
@@ -152,6 +166,197 @@ class InvestigationTools:
 
             if len(evidence) >= top_k:
                 break
+
+        return evidence
+
+    def get_callers(
+        self,
+        code_unit_id: str,
+    ) -> list[dict[str, object]]:
+        """Return structured evidence for functions that call a CodeUnit."""
+        return self._relationship_evidence(
+            self._graph_query.get_callers(code_unit_id),
+            source="get_callers",
+            relationship="CALLS",
+        )
+
+    def get_callees(
+        self,
+        code_unit_id: str,
+    ) -> list[dict[str, object]]:
+        """Return structured evidence for functions called by a CodeUnit."""
+        return self._relationship_evidence(
+            self._graph_query.get_callees(code_unit_id),
+            source="get_callees",
+            relationship="CALLS",
+        )
+
+    def get_dependencies(
+        self,
+        module_id: str,
+        *,
+        transitive: bool = False,
+        max_depth: int = 1,
+    ) -> list[dict[str, object]]:
+        """Return direct or transitive module dependency evidence."""
+        results = self._graph_query.get_module_dependencies(
+            module_id,
+            transitive=transitive,
+            max_depth=max_depth,
+        )
+        return self._relationship_evidence(
+            results,
+            source="get_dependencies",
+            relationship="IMPORTS",
+        )
+
+    def read_file(
+        self,
+        file_path: str,
+        *,
+        start_line: int | None = None,
+        end_line: int | None = None,
+    ) -> list[dict[str, object]]:
+        """Read a repository file (or line range) as structured evidence.
+
+        The path is repository-relative. When the repository root is known,
+        files are read from disk after enforcing that the resolved path remains
+        inside that root. If the file is unavailable on disk, the full source
+        retained on the module CodeUnit is used.
+        """
+        if not isinstance(file_path, str) or not file_path.strip():
+            raise ValueError("file_path cannot be empty.")
+
+        if start_line is not None and (
+            not isinstance(start_line, int)
+            or isinstance(start_line, bool)
+            or start_line < 1
+        ):
+            raise ValueError("start_line must be a positive integer.")
+
+        if end_line is not None and (
+            not isinstance(end_line, int) or isinstance(end_line, bool) or end_line < 1
+        ):
+            raise ValueError("end_line must be a positive integer.")
+
+        if start_line is not None and end_line is not None and end_line < start_line:
+            raise ValueError("end_line cannot be before start_line.")
+
+        relative_path = Path(file_path)
+
+        if relative_path.is_absolute() or ".." in relative_path.parts:
+            raise ValueError(
+                "file_path must be repository-relative without parent traversal."
+            )
+
+        module_units = [
+            unit
+            for unit in self._code_units.values()
+            if unit.kind == "module" and Path(unit.file_path) == relative_path
+        ]
+        module_unit = module_units[0] if module_units else None
+
+        if self._repository_root is not None:
+            resolved_path = (self._repository_root / relative_path).resolve()
+
+            try:
+                resolved_path.relative_to(self._repository_root)
+            except ValueError as exc:
+                raise ValueError(
+                    "file_path must remain inside the repository."
+                ) from exc
+
+            if resolved_path.is_file():
+                content = resolved_path.read_text(encoding="utf-8")
+            elif module_unit is not None and module_unit.source_code is not None:
+                # Fall back to the source captured during AST ingestion.
+                content = module_unit.source_code
+            else:
+                return []
+
+        elif module_unit is not None and module_unit.source_code is not None:
+            content = module_unit.source_code
+        else:
+            # No full-file source is available in the supplied CodeUnits.
+            return []
+
+        lines = content.splitlines()
+        first = start_line or 1
+        last = end_line or len(lines)
+
+        if first > len(lines):
+            return []
+
+        selected = lines[first - 1 : last]
+        selected_content = "\n".join(selected)
+
+        if content.endswith("\n") and last == len(lines):
+            selected_content += "\n"
+
+        unit_id = module_unit.id if module_unit else f"file:{relative_path.as_posix()}"
+
+        return [
+            {
+                "evidence_id": (
+                    f"file:{relative_path.as_posix()}:{first}-{min(last, len(lines))}"
+                ),
+                "source": "read_file",
+                "code_unit_id": unit_id,
+                "name": relative_path.name,
+                "qualified_name": (
+                    module_unit.qualified_name
+                    if module_unit
+                    else relative_path.as_posix()
+                ),
+                "kind": "module",
+                "repository": (
+                    module_unit.repository
+                    if module_unit
+                    else str(self._repository_root)
+                ),
+                "file_path": relative_path.as_posix(),
+                "start_line": first,
+                "end_line": min(last, len(lines)),
+                "content": selected_content,
+                "metadata": {
+                    "total_lines": len(lines),
+                    "requested_start_line": start_line,
+                    "requested_end_line": end_line,
+                },
+            }
+        ]
+
+    def _relationship_evidence(
+        self,
+        results: Iterable[dict],
+        *,
+        source: str,
+        relationship: str,
+    ) -> list[dict[str, object]]:
+        """Convert graph-query nodes into the common evidence schema."""
+        evidence = []
+
+        for result in results:
+            unit_id = result["code_unit_id"]
+            unit = self._code_units.get(unit_id)
+
+            if unit is None:
+                continue
+
+            evidence.append(
+                self._make_evidence(
+                    unit=unit,
+                    evidence_id=f"{source}:{unit.id}",
+                    source=source,
+                    content=unit.source_code or "",
+                    metadata={
+                        "relationship": relationship,
+                        "file_path": unit.file_path,
+                        "start_line": unit.start_line,
+                        "end_line": unit.end_line,
+                    },
+                )
+            )
 
         return evidence
 
