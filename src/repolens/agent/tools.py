@@ -298,8 +298,7 @@ class InvestigationTools:
         return [
             {
                 "evidence_id": (
-                    f"file:{relative_path.as_posix()}:"
-                    f"{first}-{min(last, len(lines))}"
+                    f"file:{relative_path.as_posix()}:{first}-{min(last, len(lines))}"
                 ),
                 "source": "read_file",
                 "code_unit_id": unit_id,

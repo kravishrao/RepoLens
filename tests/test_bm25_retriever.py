@@ -385,9 +385,9 @@ class TestBM25Ranking:
         # Loader module should rank above code-graph items
         graph_ranks = [r.rank for r in results if "graph" in r.file_path]
         for gr in graph_ranks:
-            assert (
-                loader_rank < gr
-            ), f"loader rank {loader_rank} should beat graph rank {gr}"
+            assert loader_rank < gr, (
+                f"loader rank {loader_rank} should beat graph rank {gr}"
+            )
 
     def test_clone_remote_ranked_for_clone_query(self):
         results = self.retriever.query("clone remote", top_k=5)
