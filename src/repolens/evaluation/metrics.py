@@ -7,7 +7,6 @@ import re
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
-from pathlib import PurePath
 from typing import Any
 
 _TOKEN_PATTERN = re.compile(r"[a-zA-Z0-9_]+")
@@ -17,10 +16,10 @@ def normalize_path(path: str | None) -> str:
     """Normalize file path for cross-platform matching."""
     if not path:
         return ""
-    # Standardize forward slashes and lower-case
-    normalized = PurePath(path).as_posix().lower().strip()
+    # Standardize forward slashes and lower-case across all OS platforms
+    normalized = str(path).replace("\\", "/").lower().strip()
     # Strip leading "./" if present
-    if normalized.startswith("./"):
+    while normalized.startswith("./"):
         normalized = normalized[2:]
     return normalized
 
