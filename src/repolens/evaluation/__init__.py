@@ -1,7 +1,8 @@
 """Evaluation, Benchmarks, and Dataset Loaders for RepoLens.
 
 Provides standardized baseline pipelines (B0 to B5), component ablation runners,
-benchmark query testbed, QA evaluation datasets, and reproducible experiment logging.
+benchmark query testbed, QA evaluation datasets, metrics calculators, and
+reproducible experiment and evaluation logging.
 """
 
 from __future__ import annotations
@@ -13,13 +14,22 @@ from repolens.evaluation.ablation import (
 from repolens.evaluation.baselines import (
     AgenticRAGPipeline,
     ASTStructureRAGPipeline,
+    B0_NaiveRAG,
+    B1_ASTAwareRAG,
+    B2_HybridRAG,
+    B3_GraphRAG,
+    B4_AgenticRAG,
+    B5_FullRepoLens,
     BaseBaselinePipeline,
+    BasePipeline,
     FullRepoLensPipeline,
     GraphRAGPipeline,
     HybridRAGPipeline,
     NaiveRAGPipeline,
+    PipelineExecutionResult,
     RepositoryContext,
     create_baseline_pipeline,
+    get_baseline_pipeline,
 )
 from repolens.evaluation.benchmark_suite import (
     BENCHMARK_QUERIES,
@@ -41,15 +51,37 @@ from repolens.evaluation.embeddings import (
     DeterministicHashingEmbeddingProvider,
     get_default_embedding_provider,
 )
+from repolens.evaluation.evaluator import (
+    RepoLensEvaluator,
+)
+from repolens.evaluation.metrics import (
+    compute_answer_correctness,
+    compute_citation_precision,
+    compute_evidence_coverage,
+    compute_mrr,
+    compute_ndcg_at_k,
+    compute_precision_at_k,
+    compute_recall_at_k,
+    estimate_inference_cost,
+    estimate_token_count,
+)
 from repolens.evaluation.models import (
     AblationComparison,
     AblationType,
+    AnswerMetrics,
     BaselineType,
+    BenchmarkComparisonReport,
     BenchmarkQuery,
+    ConfigurationMetrics,
+    EfficiencyMetrics,
     EvaluationMetrics,
+    EvidenceMetrics,
     ExperimentConfig,
     ExperimentRunResult,
     FixedChunk,
+    PricingConfig,
+    RetrievalMetrics,
+    SampleEvaluationResult,
     SingleQueryResult,
 )
 from repolens.evaluation.qa_dataset import (
@@ -63,6 +95,7 @@ from repolens.evaluation.runner import (
     ExperimentRunner,
     get_git_commit_hash,
     get_system_provenance,
+    run_evaluation,
 )
 
 __all__ = [
@@ -73,13 +106,25 @@ __all__ = [
     "AblationStudy",
     "AblationType",
     "AgenticRAGPipeline",
+    "AnswerMetrics",
+    "B0_NaiveRAG",
+    "B1_ASTAwareRAG",
+    "B2_HybridRAG",
+    "B3_GraphRAG",
+    "B4_AgenticRAG",
+    "B5_FullRepoLens",
     "BaseBaselinePipeline",
+    "BasePipeline",
     "BaselineType",
+    "BenchmarkComparisonReport",
     "BenchmarkQuery",
     "ChunkSearchResult",
     "ComponentContribution",
+    "ConfigurationMetrics",
     "DeterministicHashingEmbeddingProvider",
+    "EfficiencyMetrics",
     "EvaluationMetrics",
+    "EvidenceMetrics",
     "ExperimentConfig",
     "ExperimentRunResult",
     "ExperimentRunner",
@@ -91,13 +136,28 @@ __all__ = [
     "GraphRAGPipeline",
     "HybridRAGPipeline",
     "NaiveRAGPipeline",
+    "PipelineExecutionResult",
+    "PricingConfig",
     "QAEvaluationDataset",
     "QuestionSample",
+    "RepoLensEvaluator",
     "RepositoryContext",
+    "RetrievalMetrics",
+    "SampleEvaluationResult",
     "SingleQueryResult",
+    "compute_answer_correctness",
+    "compute_citation_precision",
+    "compute_evidence_coverage",
+    "compute_mrr",
+    "compute_ndcg_at_k",
+    "compute_precision_at_k",
+    "compute_recall_at_k",
     "create_baseline_pipeline",
+    "estimate_inference_cost",
+    "estimate_token_count",
     "generate_ablation_documentation",
     "get_baseline_limitations",
+    "get_baseline_pipeline",
     "get_benchmark_queries",
     "get_default_embedding_provider",
     "get_git_commit_hash",
@@ -105,5 +165,6 @@ __all__ = [
     "load_qa_dataset",
     "prepare_benchmark_context",
     "resolve_repository_dataset_path",
+    "run_evaluation",
     "validate_qa_dataset",
 ]
