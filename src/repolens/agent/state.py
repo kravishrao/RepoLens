@@ -76,3 +76,10 @@ class InvestigationState(TypedDict, total=False):
     citation_validation_results: list[dict[str, object]]
     claim_validation_results: list[dict[str, object]]
     validation_summary: dict[str, object]
+
+    # RL-36: supporting evidence association and sufficiency assessment.
+    evidence_status: str
+    evidence_assessment: dict[str, object]
+    code_unit_associations: list[dict[str, object]]
+    conflicting_evidence: list[dict[str, object]]
+    traceability_map: dict[str, list[str]]

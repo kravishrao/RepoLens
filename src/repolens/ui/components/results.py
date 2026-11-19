@@ -54,11 +54,33 @@ def render_answer_card(data: PresentationData) -> None:
 
     # Status pill container
     status_label = "Complete" if data.is_complete else "In Progress"
+    status_emoji = (
+        "🟢"
+        if data.evidence_status == "sufficient"
+        else "⚠️"
+        if data.evidence_status == "conflicting"
+        else "🟡"
+        if data.evidence_status == "uncertain"
+        else "🔴"
+    )
     st.caption(
         f"**Question:** {data.query or 'General inquiry'} | "
         f"**Status:** `{status_label}` | "
+        f"**Evidence Certainty:** `{status_emoji} {data.evidence_status.upper()}` | "
         f"**Termination Reason:** `{data.termination_reason}`"
     )
+
+    # Highlight conflicting evidence if detected
+    if data.is_conflicting and data.conflicts:
+        with st.container(border=True):
+            st.warning("⚠️ **Conflicting Repository Evidence Detected**")
+            st.markdown(
+                "Multiple contradictory definitions, signatures, or declarations were discovered:"
+            )
+            for conf in data.conflicts:
+                st.markdown(
+                    f"- **`{conf.get('symbol')}`** (`{conf.get('conflict_type')}`): {conf.get('description')}"
+                )
 
     # Render formatted markdown content
     with st.container(border=True):
@@ -313,12 +335,20 @@ def render_empty_or_failed_state(data: PresentationData) -> None:
         for err in data.errors:
             st.markdown(f"- **`{err['tool']}`**: {err['error']}")
 
-    if not data.has_evidence:
-        st.warning("⚠️ **No Relevant Code Evidence Discovered**")
+    if not data.has_evidence or data.evidence_status == "insufficient":
+        st.warning("⚠️ **Insufficient Code Evidence Discovered**")
+        reason_text = (
+            "\n".join(f"- {r}" for r in data.insufficient_reasons)
+            if data.insufficient_reasons
+            else "- No relevant code units were located."
+        )
         st.markdown(
-            f"The repository investigation completed with termination reason: `{data.termination_reason}`.\n\n"
+            f"The repository evidence is insufficient to answer the question conclusively.\n\n"
+            f"**Identified Issues:**\n{reason_text}\n\n"
+            f"**Termination Reason:** `{data.termination_reason}`\n\n"
             "**Suggestions to refine your search:**\n"
             "- Check that the repository directory exists and contains valid `.py` Python files.\n"
             "- Try query keywords matching function, class, or module names (e.g., `calculate_total`, `Client`).\n"
+            "- Check whether the requested functionality is implemented in external third-party dependencies.\n"
             "- Increase the maximum iterations or evidence capacity in the sidebar controls."
         )
