@@ -1,7 +1,7 @@
-"""Evaluation and Ablation Framework for RepoLens.
+"""Evaluation, Benchmarks, and Dataset Loaders for RepoLens.
 
 Provides standardized baseline pipelines (B0 to B5), component ablation runners,
-benchmark query testbed, and reproducible experiment result logging.
+benchmark query testbed, QA evaluation datasets, and reproducible experiment logging.
 """
 
 from __future__ import annotations
@@ -52,6 +52,13 @@ from repolens.evaluation.models import (
     FixedChunk,
     SingleQueryResult,
 )
+from repolens.evaluation.qa_dataset import (
+    GoldEvidenceLocation,
+    QAEvaluationDataset,
+    QuestionSample,
+    load_qa_dataset,
+    validate_qa_dataset,
+)
 from repolens.evaluation.runner import (
     ExperimentRunner,
     get_git_commit_hash,
@@ -80,9 +87,12 @@ __all__ = [
     "FixedChunkRetriever",
     "FixedSizeChunker",
     "FullRepoLensPipeline",
+    "GoldEvidenceLocation",
     "GraphRAGPipeline",
     "HybridRAGPipeline",
     "NaiveRAGPipeline",
+    "QAEvaluationDataset",
+    "QuestionSample",
     "RepositoryContext",
     "SingleQueryResult",
     "create_baseline_pipeline",
@@ -92,6 +102,8 @@ __all__ = [
     "get_default_embedding_provider",
     "get_git_commit_hash",
     "get_system_provenance",
+    "load_qa_dataset",
     "prepare_benchmark_context",
     "resolve_repository_dataset_path",
+    "validate_qa_dataset",
 ]

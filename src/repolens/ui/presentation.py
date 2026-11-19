@@ -160,6 +160,14 @@ class PresentationData:
     errors: list[dict[str, str]]
     total_duration_ms: float
     unique_code_elements_count: int
+    evidence_status: str = "sufficient"
+    is_sufficient: bool = True
+    is_conflicting: bool = False
+    is_uncertain: bool = False
+    conflicts: list[dict[str, Any]] = field(default_factory=list)
+    insufficient_reasons: list[str] = field(default_factory=list)
+    code_unit_associations: list[dict[str, Any]] = field(default_factory=list)
+    traceability_map: dict[str, list[str]] = field(default_factory=dict)
 
 
 def extract_presentation_data(
@@ -199,6 +207,14 @@ def extract_presentation_data(
             errors=[],
             total_duration_ms=0.0,
             unique_code_elements_count=0,
+            evidence_status="insufficient",
+            is_sufficient=False,
+            is_conflicting=False,
+            is_uncertain=False,
+            conflicts=[],
+            insufficient_reasons=["No investigation has been executed."],
+            code_unit_associations=[],
+            traceability_map={},
         )
 
     query = str(state.get("query") or "")
@@ -455,6 +471,42 @@ def extract_presentation_data(
         issues=val_issues,
     )
 
+    # Evidence status and assessment extraction (RL-36)
+    explicit_status = state.get("evidence_status")
+    if explicit_status and isinstance(explicit_status, str):
+        evidence_status = explicit_status.lower()
+    elif not all_evidence:
+        evidence_status = "insufficient"
+    elif not supported_findings and inferred_findings:
+        evidence_status = "uncertain"
+    else:
+        evidence_status = "sufficient"
+
+    raw_conflicts = state.get("conflicting_evidence") or []
+    conflicts = [dict(c) for c in raw_conflicts if isinstance(c, Mapping)]
+    is_conflicting = len(conflicts) > 0 or evidence_status == "conflicting"
+    is_sufficient = evidence_status == "sufficient" and len(all_evidence) > 0
+    is_uncertain = evidence_status in ("uncertain", "conflicting")
+
+    raw_assessment = state.get("evidence_assessment") or {}
+    insufficient_reasons: list[str] = []
+    if isinstance(raw_assessment, Mapping):
+        insufficient_reasons = [
+            str(r) for r in (raw_assessment.get("missing_aspects") or [])
+        ]
+    if not insufficient_reasons and not all_evidence:
+        insufficient_reasons = [
+            "No code units or repository evidence records were retrieved."
+        ]
+
+    raw_associations = state.get("code_unit_associations") or []
+    code_unit_associations = [
+        dict(a) for a in raw_associations if isinstance(a, Mapping)
+    ]
+
+    raw_trace_map = state.get("traceability_map") or {}
+    traceability_map = dict(raw_trace_map) if isinstance(raw_trace_map, Mapping) else {}
+
     return PresentationData(
         query=query,
         final_answer=final_answer,
@@ -473,4 +525,12 @@ def extract_presentation_data(
         errors=errors,
         total_duration_ms=round(total_duration_ms, 2),
         unique_code_elements_count=len(unique_unit_ids),
+        evidence_status=evidence_status,
+        is_sufficient=is_sufficient,
+        is_conflicting=is_conflicting,
+        is_uncertain=is_uncertain,
+        conflicts=conflicts,
+        insufficient_reasons=insufficient_reasons,
+        code_unit_associations=code_unit_associations,
+        traceability_map=traceability_map,
     )
