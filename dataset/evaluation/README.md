@@ -192,6 +192,16 @@ When evaluating RepoLens baselines (B0 through B5), this dataset provides ground
 4. **Citation Precision**: Proportion of generated citations that match gold evidence locations.
 5. **Answer Groundedness**: Factual alignment between RepoLens synthesized answers and `expected_answer`.
 
+### Reproducible Benchmark Runner
+
+Run evaluations across baseline configurations B0–B5 using the evaluation runner CLI:
+
+```bash
+python -m repolens.evaluation.runner --configs B0 B1 B2 B3 B4 B5 --output-json dataset/evaluation/benchmark_report.json --output-markdown dataset/evaluation/benchmark_report.md
+```
+
+Full benchmark results, methodology, and limitations are documented in [`benchmark_report.md`](./benchmark_report.md).
+
 ---
 
 ## 6. Known Limitations
