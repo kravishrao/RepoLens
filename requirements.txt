@@ -1,5 +1,6 @@
 langgraph>=1.2,<2.0
 networkx>=3.2
+streamlit>=1.40
 pytest>=8.0
 ruff>=0.9
 faiss-cpu>=1.7.4
