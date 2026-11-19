@@ -59,8 +59,8 @@ def render_sidebar() -> dict[str, Any]:
             "Navigation",
             options=[
                 "Investigations",
-                "Overview",
                 "Repositories",
+                "Overview",
                 "Code Graph",
                 "Evaluation",
             ],
@@ -71,34 +71,105 @@ def render_sidebar() -> dict[str, Any]:
 
         st.divider()
         st.markdown("##### REPOSITORY TARGET")
-        repo_mode = st.radio(
-            "Repository source",
-            ["Demo snapshot", "Local repository", "GitHub URL"],
-            key="rl_repo_mode",
-            label_visibility="collapsed",
-        )
 
-        if repo_mode == "Demo snapshot":
-            selected_repo = st.selectbox(
-                "Select demonstration snapshot",
-                DEMO_REPOSITORIES,
-                key="rl_demo_repository",
+        active_repo = st.session_state.get("active_repository")
+
+        if active_repo is not None:
+            st.markdown(
+                f"""
+                <div style="
+                    background: #10251F;
+                    border: 1px solid #285B4C;
+                    border-radius: 8px;
+                    padding: 0.6rem 0.8rem;
+                    margin-bottom: 0.5rem;
+                ">
+                    <div style="color: #3FB68B; font-weight: 700; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;">
+                        ● ACTIVE REPOSITORY
+                    </div>
+                    <div style="color: #F0F6FC; font-size: 0.95rem; font-weight: 600; margin-top: 0.2rem;">
+                        {active_repo.name}
+                    </div>
+                    <div style="color: #71839C; font-size: 0.75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        {active_repo.root_path}
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
             )
-            st.caption("Demonstration snapshot selected for illustrative exploration.")
-        elif repo_mode == "Local repository":
-            selected_repo = st.text_input(
-                "Local repository path",
-                placeholder="C:/Projects/my-repository",
-                key="rl_local_repository",
-            ).strip()
-            st.caption("Local repository ingestion will be expanded in RL-35.")
+
+            col_manage, col_switch = st.columns(2)
+            with col_manage:
+                if st.button(
+                    "Manage repo", key="sb_btn_manage", use_container_width=True
+                ):
+                    st.session_state["rl_navigation"] = "Repositories"
+                    st.rerun()
+            with col_switch:
+                if st.button("Switch", key="sb_btn_switch", use_container_width=True):
+                    st.session_state["active_repository"] = None
+                    st.session_state["rl_navigation"] = "Repositories"
+                    st.rerun()
+
+            selected_repo = active_repo.name
+            repo_mode = active_repo.source_type
         else:
-            selected_repo = st.text_input(
-                "GitHub URL",
-                placeholder="https://github.com/owner/repository",
-                key="rl_github_url",
-            ).strip()
-            st.caption("Remote repository cloning will be expanded in RL-35.")
+            repo_mode = st.radio(
+                "Repository source",
+                ["Demo snapshot", "Local repository", "GitHub URL"],
+                key="rl_repo_mode",
+                label_visibility="collapsed",
+            )
+
+            if repo_mode == "Demo snapshot":
+                selected_repo = st.selectbox(
+                    "Select demonstration snapshot",
+                    DEMO_REPOSITORIES,
+                    key="rl_demo_repository",
+                )
+                st.caption(
+                    "Demonstration snapshot selected for illustrative exploration."
+                )
+            elif repo_mode == "Local repository":
+                selected_repo = st.text_input(
+                    "Local repository path",
+                    placeholder="C:/Projects/my-repository",
+                    key="rl_local_repository",
+                ).strip()
+                st.caption("Load this path in the Repositories workspace.")
+            else:
+                selected_repo = st.text_input(
+                    "GitHub URL",
+                    placeholder="https://github.com/owner/repository",
+                    key="rl_github_url",
+                ).strip()
+                st.caption("Clone and load in the Repositories workspace.")
+
+            if st.button(
+                "📂 Load in Repositories",
+                key="sb_btn_goto_repos",
+                use_container_width=True,
+            ):
+                st.session_state["rl_navigation"] = "Repositories"
+                st.rerun()
+
+        st.divider()
+        st.markdown("##### INDEXED STATISTICS")
+        stat_col1, stat_col2 = st.columns(2)
+        with stat_col1:
+            st.metric(
+                "Files",
+                str(active_repo.file_count) if active_repo else "--",
+            )
+        with stat_col2:
+            st.metric(
+                "Code units",
+                str(active_repo.code_unit_count) if active_repo else "--",
+            )
+        st.metric(
+            "Graph edges",
+            str(active_repo.graph_edge_count) if active_repo else "--",
+        )
 
         st.divider()
         st.markdown("##### PIPELINE CONFIGURATION")
@@ -152,8 +223,12 @@ def render_sidebar() -> dict[str, Any]:
         )
 
         st.divider()
+        status_color = "#3FB68B" if active_repo else "#E5AA55"
+        status_text = (
+            f"Ready ({active_repo.name})" if active_repo else "Awaiting Repository"
+        )
         st.markdown(
-            """
+            f"""
             <div style="
                 display:flex;
                 align-items:center;
@@ -164,18 +239,18 @@ def render_sidebar() -> dict[str, Any]:
                 <span style="
                     width:8px;
                     height:8px;
-                    background:#3FB68B;
+                    background:{status_color};
                     border-radius:50%;
                     display:inline-block;
                 "></span>
-                Workbench Ready
+                {status_text}
             </div>
             <div style="
                 color:#71839C;
                 font-size:0.7rem;
                 margin-top:0.75rem;
             ">
-                RepoLens · v0.1.0 (RL-34)
+                RepoLens · v0.1.0 (RL-35)
             </div>
             """,
             unsafe_allow_html=True,
