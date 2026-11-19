@@ -127,3 +127,25 @@ def test_env_example_configuration() -> None:
         assert not re.search(pattern, content), (
             f"Found potential real secret matching pattern {pattern}"
         )
+
+
+def test_benchmark_plots_exist_in_assets() -> None:
+    """Verify that all generated benchmark plots and charts exist in assets/."""
+    assets_dir = REPO_ROOT / "assets"
+    expected_files = [
+        "benchmark_baseline_comparison.png",
+        "benchmark_baseline_comparison.svg",
+        "citation_precision_hallucination.png",
+        "citation_precision_hallucination.svg",
+        "latency_vs_accuracy_pareto.png",
+        "latency_vs_accuracy_pareto.svg",
+        "component_ablation_contributions.png",
+        "component_ablation_contributions.svg",
+        "per_repository_performance.png",
+        "per_repository_performance.svg",
+    ]
+
+    for fname in expected_files:
+        fpath = assets_dir / fname
+        assert fpath.is_file(), f"Missing plot file in assets/: {fname}"
+        assert fpath.stat().st_size > 1000, f"Plot file {fname} is unexpectedly small"

@@ -203,7 +203,17 @@ Follow these six scripted scenarios during the live presentation.
 
 ## 5. Experimental Results & Ablation Summary
 
-Use this table during the presentation to discuss empirical results:
+Use these figures and tables during the presentation to discuss empirical results:
+
+![Benchmark Baseline Comparison](../assets/benchmark_baseline_comparison.png)
+
+![Citation Precision & Hallucination Elimination](../assets/citation_precision_hallucination.png)
+
+![Latency vs. Accuracy Pareto Trade-off](../assets/latency_vs_accuracy_pareto.png)
+
+![Component Ablation Contributions](../assets/component_ablation_contributions.png)
+
+![Cross-Repository Performance](../assets/per_repository_performance.png)
 
 | Baseline Configuration | Recall@5 | Precision@5 | MRR | nDCG@5 | Citation Precision | Latency | Cost / Query |
 |---|---|---|---|---|---|---|---|
