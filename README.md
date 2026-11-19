@@ -404,6 +404,18 @@ RepoLens was evaluated across **100 curated repository-level questions** using p
 | **B4: Agentic RAG** | 0.9750 | 1.0000 | 1.0000 | 0.9807 | 1.0000 | 608.3 ms | $0.0193 |
 | **B5: Full RepoLens** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | **1.0000** | 728.0 ms | $0.0223 |
 
+### Benchmark Visualizations
+
+![Benchmark Baseline Comparison](assets/benchmark_baseline_comparison.png)
+
+![Citation Precision & Hallucination Elimination](assets/citation_precision_hallucination.png)
+
+![Latency vs. Accuracy Pareto Trade-off](assets/latency_vs_accuracy_pareto.png)
+
+![Component Ablation Contributions](assets/component_ablation_contributions.png)
+
+![Cross-Repository Performance](assets/per_repository_performance.png)
+
 ### Key Findings
 1. **Elimination of Citation Hallucinations**: Moving from Naive RAG (B0) to AST-aware retrieval (B1) improved Citation Precision from **0.4600 to 1.0000**, eliminating fabricated file lines.
 2. **Multi-Hop Necessity**: Graph expansion (B3) and Agentic iteration (B4–B5) increased Recall@5 from **0.6817 to 1.0000**, confirming that static code graphs are essential for resolving cross-module dependencies.
