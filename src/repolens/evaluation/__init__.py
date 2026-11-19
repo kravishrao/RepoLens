@@ -1,21 +1,60 @@
-"""RepoLens evaluation framework, benchmarks, and dataset loaders."""
+"""Evaluation, Benchmarks, and Dataset Loaders for RepoLens.
+
+Provides standardized baseline pipelines (B0 to B5), component ablation runners,
+benchmark query testbed, QA evaluation datasets, metrics calculators, and
+reproducible experiment and evaluation logging.
+"""
 
 from __future__ import annotations
 
+from repolens.evaluation.ablation import (
+    AblationStudy,
+    ComponentContribution,
+)
 from repolens.evaluation.baselines import (
+    AgenticRAGPipeline,
+    ASTStructureRAGPipeline,
     B0_NaiveRAG,
     B1_ASTAwareRAG,
     B2_HybridRAG,
     B3_GraphRAG,
     B4_AgenticRAG,
     B5_FullRepoLens,
+    BaseBaselinePipeline,
     BasePipeline,
+    FullRepoLensPipeline,
+    GraphRAGPipeline,
+    HybridRAGPipeline,
+    NaiveRAGPipeline,
     PipelineExecutionResult,
+    RepositoryContext,
+    create_baseline_pipeline,
     get_baseline_pipeline,
 )
-from repolens.evaluation.evaluator import RepoLensEvaluator
+from repolens.evaluation.benchmark_suite import (
+    BENCHMARK_QUERIES,
+    get_benchmark_queries,
+    prepare_benchmark_context,
+    resolve_repository_dataset_path,
+)
+from repolens.evaluation.chunker import (
+    ChunkSearchResult,
+    FixedChunkRetriever,
+    FixedSizeChunker,
+)
+from repolens.evaluation.documentation import (
+    BASELINE_SPECIFICATIONS,
+    generate_ablation_documentation,
+    get_baseline_limitations,
+)
+from repolens.evaluation.embeddings import (
+    DeterministicHashingEmbeddingProvider,
+    get_default_embedding_provider,
+)
+from repolens.evaluation.evaluator import (
+    RepoLensEvaluator,
+)
 from repolens.evaluation.metrics import (
-    AnswerCorrectnessResult,
     compute_answer_correctness,
     compute_citation_precision,
     compute_evidence_coverage,
@@ -25,17 +64,25 @@ from repolens.evaluation.metrics import (
     compute_recall_at_k,
     estimate_inference_cost,
     estimate_token_count,
-    evidence_matches,
 )
 from repolens.evaluation.models import (
+    AblationComparison,
+    AblationType,
     AnswerMetrics,
+    BaselineType,
     BenchmarkComparisonReport,
+    BenchmarkQuery,
     ConfigurationMetrics,
     EfficiencyMetrics,
+    EvaluationMetrics,
     EvidenceMetrics,
+    ExperimentConfig,
+    ExperimentRunResult,
+    FixedChunk,
     PricingConfig,
     RetrievalMetrics,
     SampleEvaluationResult,
+    SingleQueryResult,
 )
 from repolens.evaluation.qa_dataset import (
     GoldEvidenceLocation,
@@ -44,9 +91,21 @@ from repolens.evaluation.qa_dataset import (
     load_qa_dataset,
     validate_qa_dataset,
 )
+from repolens.evaluation.runner import (
+    ExperimentRunner,
+    get_git_commit_hash,
+    get_system_provenance,
+    run_evaluation,
+)
 
 __all__ = [
-    "AnswerCorrectnessResult",
+    "BASELINE_SPECIFICATIONS",
+    "BENCHMARK_QUERIES",
+    "ASTStructureRAGPipeline",
+    "AblationComparison",
+    "AblationStudy",
+    "AblationType",
+    "AgenticRAGPipeline",
     "AnswerMetrics",
     "B0_NaiveRAG",
     "B1_ASTAwareRAG",
@@ -54,19 +113,38 @@ __all__ = [
     "B3_GraphRAG",
     "B4_AgenticRAG",
     "B5_FullRepoLens",
+    "BaseBaselinePipeline",
     "BasePipeline",
+    "BaselineType",
     "BenchmarkComparisonReport",
+    "BenchmarkQuery",
+    "ChunkSearchResult",
+    "ComponentContribution",
     "ConfigurationMetrics",
+    "DeterministicHashingEmbeddingProvider",
     "EfficiencyMetrics",
+    "EvaluationMetrics",
     "EvidenceMetrics",
+    "ExperimentConfig",
+    "ExperimentRunResult",
+    "ExperimentRunner",
+    "FixedChunk",
+    "FixedChunkRetriever",
+    "FixedSizeChunker",
+    "FullRepoLensPipeline",
     "GoldEvidenceLocation",
+    "GraphRAGPipeline",
+    "HybridRAGPipeline",
+    "NaiveRAGPipeline",
     "PipelineExecutionResult",
     "PricingConfig",
     "QAEvaluationDataset",
     "QuestionSample",
     "RepoLensEvaluator",
+    "RepositoryContext",
     "RetrievalMetrics",
     "SampleEvaluationResult",
+    "SingleQueryResult",
     "compute_answer_correctness",
     "compute_citation_precision",
     "compute_evidence_coverage",
@@ -74,10 +152,19 @@ __all__ = [
     "compute_ndcg_at_k",
     "compute_precision_at_k",
     "compute_recall_at_k",
+    "create_baseline_pipeline",
     "estimate_inference_cost",
     "estimate_token_count",
-    "evidence_matches",
+    "generate_ablation_documentation",
+    "get_baseline_limitations",
     "get_baseline_pipeline",
+    "get_benchmark_queries",
+    "get_default_embedding_provider",
+    "get_git_commit_hash",
+    "get_system_provenance",
     "load_qa_dataset",
+    "prepare_benchmark_context",
+    "resolve_repository_dataset_path",
+    "run_evaluation",
     "validate_qa_dataset",
 ]
