@@ -254,6 +254,9 @@ def test_render_pages_smoke() -> None:
         count = spec if isinstance(spec, int) else len(spec)
         return [MagicMock() for _ in range(count)]
 
+    def mock_tabs(tabs, **kwargs):
+        return [MagicMock() for _ in range(len(tabs))]
+
     with (
         patch("streamlit.session_state", mock_state),
         patch("streamlit.markdown"),
@@ -265,16 +268,7 @@ def test_render_pages_smoke() -> None:
         patch("streamlit.text_area", return_value=""),
         patch("streamlit.text_input", return_value=""),
         patch("streamlit.columns", side_effect=mock_columns),
-        patch(
-            "streamlit.tabs",
-            return_value=[
-                MagicMock(),
-                MagicMock(),
-                MagicMock(),
-                MagicMock(),
-                MagicMock(),
-            ],
-        ),
+        patch("streamlit.tabs", side_effect=mock_tabs),
     ):
         render_overview()
         render_repositories(config)
