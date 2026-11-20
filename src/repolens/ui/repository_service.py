@@ -133,9 +133,25 @@ def resolve_repository_source(source: str) -> tuple[Path, str, str | None]:
     if not clean:
         raise InvalidRepositoryError("Repository path or source cannot be empty.")
 
-    # Check if user selected a bundled repository identifier
+    norm = (
+        clean.replace(" (illustrative snapshot)", "").replace(" (snapshot)", "").strip()
+    )
+
+    # Check if target is the RepoLens project codebase itself
+    if norm.lower() in {"repolens", "the original repolens"}:
+        return PROJECT_ROOT, "local", None
+
+    # Check if user selected a bundled repository identifier or snapshot label
     for bundled in get_bundled_repositories():
-        if clean in {bundled["id"], bundled["name"], bundled["rel_path"]}:
+        identifiers = {
+            bundled["id"].lower(),
+            bundled["name"].lower(),
+            bundled["rel_path"].lower(),
+        }
+        if (
+            clean in {bundled["id"], bundled["name"], bundled["rel_path"]}
+            or norm.lower() in identifiers
+        ):
             target_path = Path(bundled["abs_path"])
             if not target_path.is_dir():
                 raise InvalidRepositoryError(
