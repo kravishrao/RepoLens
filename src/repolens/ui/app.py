@@ -224,7 +224,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if st.button(
                 "📦 click",
                 key="btn_quick_click",
-                use_container_width=True,
+                width="stretch",
                 help="Click CLI (91 files)",
             ):
                 _trigger_repository_loading("dataset/repositories/click")
@@ -232,7 +232,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if st.button(
                 "📦 flask",
                 key="btn_quick_flask",
-                use_container_width=True,
+                width="stretch",
                 help="Flask (54 files)",
             ):
                 _trigger_repository_loading("dataset/repositories/flask")
@@ -240,7 +240,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if st.button(
                 "📦 requests",
                 key="btn_quick_requests",
-                use_container_width=True,
+                width="stretch",
                 help="Requests (32 files)",
             ):
                 _trigger_repository_loading("dataset/repositories/requests")
@@ -248,7 +248,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if st.button(
                 "📦 fastapi",
                 key="btn_quick_fastapi",
-                use_container_width=True,
+                width="stretch",
                 help="FastAPI (68 files)",
             ):
                 _trigger_repository_loading("dataset/repositories/fastapi")
@@ -256,7 +256,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if st.button(
                 "📦 pydantic",
                 key="btn_quick_pydantic",
-                use_container_width=True,
+                width="stretch",
                 help="Pydantic (82 files)",
             ):
                 _trigger_repository_loading("dataset/repositories/pydantic")
@@ -266,7 +266,7 @@ def render_investigations(config: dict[str, Any]) -> None:
                 key="btn_demo_ingest",
                 on_click=navigate_to,
                 args=("Repositories",),
-                use_container_width=True,
+                width="stretch",
             )
 
     preset = config.get("preset_query", "Custom question")
@@ -284,7 +284,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             key="chip_q1",
             on_click=_set_query_prompt,
             args=("Where is the Command class defined and what are its methods?",),
-            use_container_width=True,
+            width="stretch",
         )
     with c2:
         st.button(
@@ -292,7 +292,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             key="chip_q2",
             on_click=_set_query_prompt,
             args=("How does Group route and invoke subcommands?",),
-            use_container_width=True,
+            width="stretch",
         )
     with c3:
         st.button(
@@ -302,7 +302,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             args=(
                 "Explain how BM25 lexical retriever tokenizes source code and scores queries",
             ),
-            use_container_width=True,
+            width="stretch",
         )
     with c4:
         st.button(
@@ -312,7 +312,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             args=(
                 "How does CodeGraph build relationships between functions and classes?",
             ),
-            use_container_width=True,
+            width="stretch",
         )
 
     query = st.text_area(
@@ -331,13 +331,13 @@ def render_investigations(config: dict[str, Any]) -> None:
         run_clicked = st.button(
             "🔍 Run Investigation",
             type="primary",
-            use_container_width=True,
+            width="stretch",
         )
 
     with clear_col:
         clear_clicked = st.button(
             "Clear result",
-            use_container_width=True,
+            width="stretch",
         )
 
     with mode_col:
@@ -572,7 +572,7 @@ def render_investigations(config: dict[str, Any]) -> None:
                             "Hits": step.get("hits", "—"),
                         }
                     )
-                st.dataframe(trace_rows, use_container_width=True, hide_index=True)
+                st.dataframe(trace_rows, width="stretch", hide_index=True)
 
         # Tab 4: Code Graph Relationships
         with graph_tab:
@@ -582,7 +582,7 @@ def render_investigations(config: dict[str, Any]) -> None:
             if not graph_edges:
                 st.info("No structural relationships retrieved.")
             else:
-                st.dataframe(graph_edges, use_container_width=True, hide_index=True)
+                st.dataframe(graph_edges, width="stretch", hide_index=True)
 
         # Tab 5: Baseline Ablation Comparison
         with compare_tab:
@@ -632,7 +632,7 @@ def render_investigations(config: dict[str, Any]) -> None:
                 },
             ]
 
-            st.dataframe(comparison_data, use_container_width=True, hide_index=True)
+            st.dataframe(comparison_data, width="stretch", hide_index=True)
 
     else:
         # Welcome placeholder
@@ -742,11 +742,11 @@ def render_repositories(config: dict[str, Any]) -> None:
         st.write("")
         btn_cols = st.columns([1.5, 1.5, 1.8, 3.2])
         with btn_cols[0]:
-            if st.button("🔄 Reload repository", use_container_width=True):
+            if st.button("🔄 Reload repository", width="stretch"):
                 with st.spinner("Reloading repository..."):
                     _trigger_repository_loading(active_repo.source)
         with btn_cols[1]:
-            if st.button("🔀 Switch repository", use_container_width=True):
+            if st.button("🔀 Switch repository", width="stretch"):
                 st.session_state["active_repository"] = None
                 st.rerun()
         with btn_cols[2]:
@@ -756,7 +756,7 @@ def render_repositories(config: dict[str, Any]) -> None:
                 type="primary",
                 on_click=navigate_to,
                 args=("Investigations",),
-                use_container_width=True,
+                width="stretch",
             )
 
         st.divider()
@@ -797,7 +797,7 @@ def render_repositories(config: dict[str, Any]) -> None:
                         }
                         for f in filtered_files
                     ],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:
@@ -842,7 +842,7 @@ def render_repositories(config: dict[str, Any]) -> None:
                         }
                         for u in displayed_units
                     ],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:
@@ -855,7 +855,7 @@ def render_repositories(config: dict[str, Any]) -> None:
             if active_repo.graph_edges:
                 st.dataframe(
                     active_repo.graph_edges[:200],
-                    use_container_width=True,
+                    width="stretch",
                     hide_index=True,
                 )
             else:
@@ -871,9 +871,7 @@ def render_repositories(config: dict[str, Any]) -> None:
                 st.warning(
                     f"⚠️ {len(active_repo.parse_errors)} files encountered AST syntax errors during parsing:"
                 )
-                st.dataframe(
-                    active_repo.parse_errors, use_container_width=True, hide_index=True
-                )
+                st.dataframe(active_repo.parse_errors, width="stretch", hide_index=True)
 
     else:
         # Repository selection interface
@@ -1000,7 +998,7 @@ def render_overview() -> None:
             key="btn_open_repositories",
             on_click=navigate_to,
             args=("Repositories",),
-            use_container_width=True,
+            width="stretch",
         )
 
     with middle, st.container(border=True):
@@ -1013,7 +1011,7 @@ def render_overview() -> None:
             key="btn_open_investigations",
             on_click=navigate_to,
             args=("Investigations",),
-            use_container_width=True,
+            width="stretch",
         )
 
     with right, st.container(border=True):
@@ -1024,7 +1022,7 @@ def render_overview() -> None:
             key="btn_open_graph",
             on_click=navigate_to,
             args=("Code Graph",),
-            use_container_width=True,
+            width="stretch",
         )
 
 
@@ -1085,7 +1083,7 @@ def render_code_graph(config: dict[str, Any]) -> None:
             )
             st.dataframe(
                 filtered_edges[:250],
-                use_container_width=True,
+                width="stretch",
                 hide_index=True,
             )
         else:
@@ -1131,7 +1129,7 @@ def render_code_graph(config: dict[str, Any]) -> None:
                 "target": "CodeUnit",
             },
         ]
-        st.dataframe(sample_edges, use_container_width=True, hide_index=True)
+        st.dataframe(sample_edges, width="stretch", hide_index=True)
 
         st.button(
             "📂 Load a real repository now",
@@ -1220,7 +1218,7 @@ def render_evaluation(config: dict[str, Any]) -> None:
                 "Verification": "Source ground-truth",
             },
         ]
-        st.dataframe(matrix, use_container_width=True, hide_index=True)
+        st.dataframe(matrix, width="stretch", hide_index=True)
 
     with eval_tabs[1]:
         st.subheader("Empirical baseline comparison")
@@ -1277,7 +1275,7 @@ def render_evaluation(config: dict[str, Any]) -> None:
                 "Context Unit": "Verified AST Ground Truth",
             },
         ]
-        st.dataframe(benchmarks, use_container_width=True, hide_index=True)
+        st.dataframe(benchmarks, width="stretch", hide_index=True)
 
     with eval_tabs[2]:
         st.subheader("Baseline specifications and documented limitations")
@@ -1306,7 +1304,7 @@ def render_evaluation(config: dict[str, Any]) -> None:
             }
             for q in BENCHMARK_QUERIES
         ]
-        st.dataframe(query_rows, use_container_width=True, hide_index=True)
+        st.dataframe(query_rows, width="stretch", hide_index=True)
 
     with eval_tabs[4]:
         st.subheader("Research Paper & Experimental Findings")
