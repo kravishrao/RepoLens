@@ -140,14 +140,14 @@ def render_sidebar() -> dict[str, Any]:
                     key="sb_btn_manage",
                     on_click=_set_pending_nav,
                     args=("Repositories",),
-                    use_container_width=True,
+                    width="stretch",
                 )
             with col_switch:
                 st.button(
                     "Switch",
                     key="sb_btn_switch",
                     on_click=_switch_repo,
-                    use_container_width=True,
+                    width="stretch",
                 )
 
             selected_repo = active_repo.name
@@ -189,7 +189,7 @@ def render_sidebar() -> dict[str, Any]:
                 key="sb_btn_goto_repos",
                 on_click=_set_pending_nav,
                 args=("Repositories",),
-                use_container_width=True,
+                width="stretch",
             )
 
         st.divider()
