@@ -1,6 +1,7 @@
 # RepoLens: Verifiable Repository-Level Code Intelligence via Structure-Aware Hybrid Retrieval, Graph Context Expansion, and Ground-Truth Citation Verification
 
-**Authors:** RepoLens Research Team  
+**Authors:** K Ravish Rao, K R Manoj, Mohit S, B M Harshith Kumar
+**Affiliation:** Department of Computer Science and Engineering, PES University, Bangalore, India  
 **Date:** November 2026  
 **Artifact Repository:** [RepoLens GitHub Repository](https://github.com/kravishrao/RepoLens)
 

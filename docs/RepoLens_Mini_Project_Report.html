@@ -192,40 +192,84 @@ li {
     padding-top: 1px;
 }
 
-/* Tables */
-table.ieee-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0.65rem 0;
-    font-size: 7.6pt;
-    line-height: 1.18;
+/* IEEE Table Layout & Professional Typography */
+.table-wrapper {
+    margin: 0.70rem 0;
+    break-inside: avoid;
     page-break-inside: avoid;
 }
 
-table.ieee-table th, table.ieee-table td {
-    border: 0.5px solid #475569;
-    padding: 3px 4px;
-    text-align: center;
-}
-
-table.ieee-table th {
-    background-color: #F1F5F9;
-    font-weight: bold;
-}
-
-table.full-width {
+.table-wrapper.full-width {
     column-span: all;
-    margin: 0.8rem 0;
+    width: 100%;
+    margin: 0.85rem 0;
 }
 
 .table-caption {
-    font-size: 7.8pt;
+    font-family: 'Times New Roman', serif;
+    font-size: 8pt;
     font-weight: bold;
     text-align: center;
     text-transform: uppercase;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.35rem;
     letter-spacing: 0.04em;
+    color: #0F172A;
     break-after: avoid;
+}
+
+table.ieee-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 7.6pt;
+    line-height: 1.22;
+    border-top: 1.5px solid #0F172A;
+    border-bottom: 1.5px solid #0F172A;
+    margin: 0 auto;
+}
+
+table.ieee-table th {
+    border-top: 1.5px solid #0F172A;
+    border-bottom: 1px solid #0F172A;
+    border-left: none;
+    border-right: none;
+    padding: 4px 5px;
+    background-color: #F8FAFC;
+    font-weight: bold;
+    color: #0F172A;
+    font-size: 7.6pt;
+}
+
+table.ieee-table td {
+    border-top: 0.5px solid #E2E8F0;
+    border-bottom: 0.5px solid #E2E8F0;
+    border-left: none;
+    border-right: none;
+    padding: 3.5px 5px;
+    color: #1E293B;
+}
+
+table.ieee-table td.text-left, table.ieee-table th.text-left {
+    text-align: left;
+}
+
+table.ieee-table td.text-center, table.ieee-table th.text-center {
+    text-align: center;
+}
+
+table.ieee-table td.text-right, table.ieee-table th.text-right {
+    text-align: right;
+}
+
+table.ieee-table tr.total-row td {
+    border-top: 1px solid #0F172A;
+    border-bottom: 1.5px solid #0F172A;
+    font-weight: bold;
+    background-color: #F8FAFC;
+}
+
+table.ieee-table tr.highlight-row td {
+    background-color: #F0FDF4;
+    font-weight: bold;
 }
 
 .table-footnote {
@@ -330,8 +374,9 @@ code {
     <div class="subtitle">A Verifiable Multi-Hop Code Understanding System for Enterprise Software Engineering</div>
     <div class="authors">
         <span class="author-name">K Ravish Rao</span>, 
-        <span class="author-name">Manoj Kanur</span>, 
-        <span class="author-name">Research Collaborators</span>
+        <span class="author-name">K R Manoj</span>, 
+        <span class="author-name">Mohit S</span>, 
+        <span class="author-name">B M Harshith Kumar</span>
     </div>
     <div class="affiliation">
         Department of Computer Science and Engineering, PES University, Bangalore, India<br>
@@ -528,9 +573,10 @@ code {
 <h4 class="ieee-subsubheading">1) Tool Registry & Execution Schemas</h4>
 <p>The agent operates via a strictly typed tool interface. Table VIII formalizes the eight specialized tools, their functional roles, parameter contracts, and graph access patterns.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE VIII: RepoLens Investigation Tool Registry & Capabilities</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Tool Name</th>
             <th>Input Parameters</th>
@@ -589,6 +635,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <h3 class="ieee-subheading">E. Ground-Truth Source Citation Verification</h3>
 <p>The definitive stage of the RepoLens pipeline is the <code>CitationValidator</code>. Every generated answer <i>A</i> undergoes rigorous static inspection before display to the user. Citations are extracted using regular expressions and symbol patterns matching <code>&lt;file_path&gt;:L&lt;start&gt;-L&lt;end&gt;</code> or <code>&lt;qualified_symbol&gt;</code>.</p>
@@ -605,9 +652,10 @@ code {
 <h4 class="ieee-subsubheading">1) Citation Truth Table & Hallucination Taxonomy</h4>
 <p>To eliminate developer uncertainty, the <code>CitationValidator</code> assigns each candidate citation to an unambiguous status category based on physical validation predicates, as defined in Table IX.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE IX: Citation Verification Truth Table & Status Taxonomy</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Filesystem Exists</th>
             <th>Line Bounds Valid</th>
@@ -654,6 +702,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <!-- SECTION V -->
 <h2 class="ieee-heading">V. System Implementation & Frontend Workbench</h2>
@@ -672,9 +721,10 @@ code {
 <h3 class="ieee-subheading">A. Benchmark Repositories</h3>
 <p>The target repositories were selected to represent diverse architectural styles, codebase sizes, and domain abstractions. Table I details the inventory characteristics of the benchmark corpus.</p>
 
-<table class="ieee-table full-width">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE I: Benchmark Repository Characteristics & Code Inventory</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Repository</th>
             <th>Domain / Role</th>
@@ -687,7 +737,7 @@ code {
     </thead>
     <tbody>
         <tr>
-            <td><strong>Click</strong> (pallets/click)</td>
+            <td class="text-left"><strong>Click</strong> (pallets/click)</td>
             <td>Command Line Interface Framework</td>
             <td>91</td>
             <td>2,186</td>
@@ -696,7 +746,7 @@ code {
             <td>24,800</td>
         </tr>
         <tr>
-            <td><strong>Flask</strong> (pallets/flask)</td>
+            <td class="text-left"><strong>Flask</strong> (pallets/flask)</td>
             <td>WSGI Web Application Framework</td>
             <td>54</td>
             <td>1,420</td>
@@ -705,7 +755,7 @@ code {
             <td>18,400</td>
         </tr>
         <tr>
-            <td><strong>Requests</strong> (psf/requests)</td>
+            <td class="text-left"><strong>Requests</strong> (psf/requests)</td>
             <td>HTTP Client Library</td>
             <td>32</td>
             <td>890</td>
@@ -714,7 +764,7 @@ code {
             <td>12,600</td>
         </tr>
         <tr>
-            <td><strong>FastAPI</strong> (tiangolo/fastapi)</td>
+            <td class="text-left"><strong>FastAPI</strong> (tiangolo/fastapi)</td>
             <td>Async Web & API Framework</td>
             <td>68</td>
             <td>1,840</td>
@@ -723,7 +773,7 @@ code {
             <td>22,300</td>
         </tr>
         <tr>
-            <td><strong>Pydantic</strong> (pydantic/pydantic)</td>
+            <td class="text-left"><strong>Pydantic</strong> (pydantic/pydantic)</td>
             <td>Data Validation & Settings Parsing</td>
             <td>82</td>
             <td>2,450</td>
@@ -732,7 +782,7 @@ code {
             <td>38,900</td>
         </tr>
         <tr style="font-weight:bold; background:#F8FAFC;">
-            <td>Total Corpus</td>
+            <td class="text-left">Total Corpus</td>
             <td>5 Canonical Python Repositories</td>
             <td>327</td>
             <td>8,786</td>
@@ -742,6 +792,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <h3 class="ieee-subheading">B. Query Corpus & Question Categories</h3>
 <p>The evaluation corpus contains 100 standardized questions distributed equally (20 per repository) across four difficulty categories:</p>
@@ -756,9 +807,10 @@ code {
 <h3 class="ieee-subheading">C. Baseline Configurations (B0 to B5)</h3>
 <p>We systematically construct six progressive architectural baselines under identical runtime environments to isolate individual component contributions, as summarized in Table II.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE II: Progressive Baseline Configurations</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Config</th>
             <th>Name</th>
@@ -826,6 +878,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <h3 class="ieee-subheading">D. Evaluation Metrics</h3>
 <p>We record seven empirical metrics across all 100 queries:</p>
@@ -844,9 +897,10 @@ code {
 
 <p>The definitive empirical findings across all 100 benchmark queries are documented in Table III. The numbers reflect exact executions recorded in the RepoLens benchmark evaluation suite (<code>benchmark_report.json</code>).</p>
 
-<table class="ieee-table full-width">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE III: Empirical Performance Benchmark across Baselines B0–B5 (100 Evaluation Queries)</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Configuration</th>
             <th>Recall@5</th>
@@ -921,6 +975,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <h3 class="ieee-subheading">A. Analysis of Research Questions</h3>
 
@@ -937,9 +992,10 @@ code {
 <h3 class="ieee-subheading">B. Category-Wise Breakdown & Analysis</h3>
 <p>To evaluate how architectural components impact distinct query archetypes, Table V reports Recall@5 and Citation Precision partitioned by the four query categories.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper">
     <div class="table-caption">TABLE V: Category-Wise Recall@5 and Citation Precision Breakdown</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Query Category (Count)</th>
             <th>B0 (Naive)</th>
@@ -979,15 +1035,17 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>The category breakdown highlights that conventional RAG experiences catastrophic degradation on Cross-File Dependencies (24% Recall) and Architectural Flow (18% Recall). Hybrid retrieval partially addresses symbol lookups (96% Recall on DSD), but only multigraph expansion and agentic reasoning lift CFD and AEF performance to 100%.</p>
 
 <h3 class="ieee-subheading">C. Per-Repository Performance Analysis</h3>
 <p>To assess generalizability across disparate architectural paradigms, Table VII summarizes retrieval and citation metrics disaggregated across the five benchmark repositories.</p>
 
-<table class="ieee-table full-width">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE VII: Empirical Performance Disaggregated across Individual Repositories (RepoLens B5)</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Repository</th>
             <th>Recall@5</th>
@@ -1001,7 +1059,7 @@ code {
     </thead>
     <tbody>
         <tr>
-            <td><strong>Click</strong> (pallets/click)</td>
+            <td class="text-left"><strong>Click</strong> (pallets/click)</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1011,7 +1069,7 @@ code {
             <td>2.84 s</td>
         </tr>
         <tr>
-            <td><strong>Flask</strong> (pallets/flask)</td>
+            <td class="text-left"><strong>Flask</strong> (pallets/flask)</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1021,7 +1079,7 @@ code {
             <td>1.92 s</td>
         </tr>
         <tr>
-            <td><strong>Requests</strong> (psf/requests)</td>
+            <td class="text-left"><strong>Requests</strong> (psf/requests)</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1031,7 +1089,7 @@ code {
             <td>1.25 s</td>
         </tr>
         <tr>
-            <td><strong>FastAPI</strong> (tiangolo/fastapi)</td>
+            <td class="text-left"><strong>FastAPI</strong> (tiangolo/fastapi)</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1041,7 +1099,7 @@ code {
             <td>2.48 s</td>
         </tr>
         <tr>
-            <td><strong>Pydantic</strong> (pydantic/pydantic)</td>
+            <td class="text-left"><strong>Pydantic</strong> (pydantic/pydantic)</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1051,7 +1109,7 @@ code {
             <td>3.62 s</td>
         </tr>
         <tr style="font-weight:bold; background:#F8FAFC;">
-            <td>Aggregate Corpus</td>
+            <td class="text-left">Aggregate Corpus</td>
             <td>1.0000</td>
             <td>1.0000</td>
             <td>1.0000</td>
@@ -1062,6 +1120,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>The per-repository findings demonstrate consistent empirical perfection across diverse code styles. In <em>Requests</em> (compact procedural/OO HTTP client), indexing completes in 1.25 s with 654 ms query latency. In <em>Pydantic</em> (heavily metaprogrammed data validation engine), indexing requires 3.62 s due to dense generic models, yet query-time verification sustains 100% precision within 831 ms.</p>
 
@@ -1069,9 +1128,10 @@ code {
 <h3 class="ieee-subheading">D. Quantified Failure Mode Analysis across Baselines</h3>
 <p>To evaluate how structural representations eliminate specific error classes, Table X documents the precise failure distribution observed across the 100 benchmark queries for baselines B0 through B5.</p>
 
-<table class="ieee-table full-width">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE X: Quantified Failure Mode Distribution across 100 Benchmark Queries</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Failure Mode Category</th>
             <th>B0 (Naive)</th>
@@ -1139,6 +1199,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>The failure distribution reveals that Naive RAG (B0) accumulated 167 total failure incidents across 100 queries, with line hallucination (54 incidents) and syntactic truncation (38 incidents) predominating. AST CodeUnit chunking completely eradicated both truncation and line drift (0 incidents in B1). Hybrid retrieval reduced name collisions from 28 to 4, while CodeGraph multigraph expansion eliminated cross-file blindness. RepoLens (B5) attained a flawless record with zero failure incidents.</p>
 
@@ -1190,9 +1251,10 @@ code {
 
 <p>Table VI breaks down the execution latency and resource requirements of the RepoLens pipeline across indexing and query processing phases.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper">
     <div class="table-caption">TABLE VI: Computational Overhead & Latency Profile</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Subsystem / Phase</th>
             <th>Type</th>
@@ -1263,6 +1325,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>The profile demonstrates that offline indexing for a 25,000 LOC repository completes in under 7 seconds, while online query latency remains strictly sub-second (728 ms), satisfying interactive IDE responsiveness requirements.</p>
 
@@ -1271,9 +1334,10 @@ code {
 
 <p>To quantify the marginal contribution of each architectural component, we conduct an ablation analysis across query categories. Table IV summarizes the performance degradation observed when individual subsystems are systematically disabled.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE IV: Component Ablation Study — Relative Performance Degradation</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Ablation Setup</th>
             <th>&Delta;<i>R</i>@5</th>
@@ -1327,6 +1391,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>The ablation findings confirm that AST-aware chunking and CodeGraph expansion represent the two most influential architectural pillars of RepoLens. Disabling CodeGraph expansion causes a 31.8% collapse in Recall@5, primarily driven by failures on cross-file dependency queries. Reverting from AST CodeUnits to fixed chunks induces a catastrophic 62.6% drop in Recall@5 and destroys citation precision.</p>
 
@@ -1349,9 +1414,10 @@ code {
 <p>To substantiate release readiness, RepoLens has been subjected to exhaustive test-driven validation. The repository contains <strong>545 automated unit and integration tests</strong> spanning seven dedicated suites: <code>test_ingestion</code> (file discovery, path sanitization, AST visitor grammar), <code>test_retrieval</code> (BM25 tokenization, FAISS indexing, RRF rank fusion, cross-encoder scoring), <code>test_graph</code> (NetworkX edge integrity, BFS context expansion), <code>test_agents</code> (LangGraph state transitions, tool execution loops), <code>test_validation</code> (citation predicate checks, path security), <code>test_ui</code> (Streamlit widget state isolation, navigation callback buffering), and <code>test_evaluation</code> (reproducible benchmark scoring). All 545 tests execute with a 100% pass rate in continuous integration pipelines across Python 3.10 through 3.13.</p>
 
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE XII: Verification Test Suite Inventory (545 Passing Automated Tests)</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Test Suite Module</th>
             <th>Target Subsystem</th>
@@ -1419,6 +1485,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>Furthermore, 100% of source files adhere to rigorous static typing and formatting standards, passing <code>ruff format --check src tests</code> and <code>ruff check src tests</code> with zero errors or warnings.</p>
 
@@ -1433,9 +1500,10 @@ code {
 <h3 class="ieee-subheading">A. Multi-Language Polyglot Grammar Generalization</h3>
 <p>While the present implementation targets Python repositories using the native <code>ast</code> module, the underlying CodeUnit tuple representation and CodeGraph schema are intentionally language-agnostic. To support polyglot enterprise architectures, we have designed a unified grammar abstraction layer utilizing Tree-sitter concrete syntax tree (CST) parsers. Table XI outlines the syntactic node mapping across five target programming languages.</p>
 
-<table class="ieee-table">
+<div class="table-wrapper full-width">
     <div class="table-caption">TABLE XI: Polyglot AST Grammar Node Mapping for Future Multi-Language Support</div>
-    <thead>
+    <table class="ieee-table">
+<thead>
         <tr>
             <th>Language</th>
             <th>Module Node</th>
@@ -1482,6 +1550,7 @@ code {
         </tr>
     </tbody>
 </table>
+</div>
 
 <p>By compiling Tree-sitter query patterns (S-expressions) into standardized <code>CodeUnit</code> instances, RepoLens can index heterogeneous polyglot repositories without altering the downstream hybrid retrieval, multigraph BFS, or citation validation algorithms.</p>
 
@@ -1547,9 +1616,13 @@ code {
 <!-- BIOGRAPHIES -->
 <h2 class="ieee-heading">Author Biographies</h2>
 
-<p class="no-indent"><strong>K Ravish Rao</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research interests include program comprehension, retrieval-augmented generation, compiler construction, and agentic workflows. He served as the primary architect of the RepoLens system, leading backend integration, AST parsing, and graph retrieval pipelines.</p>
+<p class="no-indent"><strong>K Ravish Rao</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research interests include program comprehension, retrieval-augmented generation, compiler construction, and agentic workflows. He served as the primary system architect of RepoLens, leading the AST parsing, graph context expansion, and end-to-end integration workflows.</p>
 
-<p class="no-indent"><strong>Manoj Kanur</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research focuses on natural language processing, vector similarity indexing, citation validation, and user interface engineering for software analysis tools. He contributed to the hybrid retrieval engine and interactive Streamlit workbench.</p>
+<p class="no-indent"><strong>K R Manoj</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research focuses on natural language processing, vector similarity indexing, citation validation, and user interface engineering for developer tools. He contributed to the hybrid retrieval pipeline, citation predicate verification, and benchmark evaluation suite.</p>
+
+<p class="no-indent"><strong>Mohit S</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research interests span information retrieval, lexical search optimization, graph algorithms, and software testing. He contributed to the BM25 lexical retriever, Reciprocal Rank Fusion implementation, and automated test harness validation.</p>
+
+<p class="no-indent"><strong>B M Harshith Kumar</strong> is a Computer Science and Engineering undergraduate student at PES University, Bangalore, India. His research interests include distributed systems, empirical software engineering, full-stack visualization, and performance profiling. He contributed to the interactive Streamlit 2.0 workbench, CodeGraph visualization modules, and runtime latency evaluation.</p>
 
 </div> <!-- end columns -->
 
