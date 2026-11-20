@@ -6,6 +6,7 @@ code graph exploration, grounded answer generation, and citation validation.
 
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -127,6 +128,12 @@ def init_session_state() -> None:
     if "latest_repo" not in st.session_state:
         st.session_state["latest_repo"] = ""
 
+    if "pending_navigation" not in st.session_state:
+        st.session_state["pending_navigation"] = None
+
+    if st.session_state.get("pending_navigation"):
+        st.session_state["rl_navigation"] = st.session_state.pop("pending_navigation")
+
     if "rl_navigation" not in st.session_state:
         st.session_state["rl_navigation"] = "Investigations"
 
@@ -141,70 +148,188 @@ def init_session_state() -> None:
 
 
 def navigate_to(page: str) -> None:
-    """Switch current active workspace page."""
-    st.session_state["rl_navigation"] = page
+    """Switch current active workspace page safely across reruns."""
+    st.session_state["pending_navigation"] = page
+    with contextlib.suppress(Exception):
+        st.session_state["rl_navigation"] = page
+
+
+def _set_query_prompt(prompt_text: str) -> None:
+    """Callback to update investigation query in session state."""
+    st.session_state["investigation_query"] = prompt_text
 
 
 def render_investigations(config: dict[str, Any]) -> None:
     """Render the primary repository investigation workspace."""
+    active_repo: LoadedRepository | None = st.session_state.get("active_repository")
+
     st.markdown(
-        '<div class="rl-eyebrow">REPOSITORY INTELLIGENCE WORKSPACE</div>',
+        '<div class="rl-eyebrow">INTELLIGENT REPOSITORY REASONING</div>',
         unsafe_allow_html=True,
     )
     st.title("RepoLens — Repository Investigation")
     st.markdown(
-        '<p class="rl-muted">Investigate Python codebases with structured retrieval, '
-        "graph context and verifiable source evidence.</p>",
+        '<p class="rl-muted">Ask natural-language questions to analyze code architecture, '
+        "symbols, callers, and dependencies with zero citation hallucination.</p>",
         unsafe_allow_html=True,
     )
-
-    active_repo: LoadedRepository | None = st.session_state.get("active_repository")
 
     if active_repo is not None:
         st.markdown(
             f"""
-            <div class="rl-evidence">
-                <strong>ACTIVE REPOSITORY</strong>: <code>{active_repo.name}</code> &nbsp;·&nbsp;
-                {active_repo.file_count} Python files &nbsp;·&nbsp;
-                {active_repo.code_unit_count} CodeUnits &nbsp;·&nbsp;
-                {active_repo.graph_edge_count} Graph edges
+            <div class="rl-active-banner">
+                <div style="display:flex; align-items:center; gap:0.8rem;">
+                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#34D399; box-shadow:0 0 10px #34D399;"></span>
+                    <div>
+                        <div style="font-size:1.05rem; font-weight:700; color:#F8FAFC;">
+                            {active_repo.name}
+                            <span style="font-size:0.72rem; color:#34D399; font-weight:600; margin-left:0.4rem; padding:0.15rem 0.5rem; background:rgba(52,211,153,0.15); border-radius:12px; font-family:'JetBrains Mono';">ACTIVE TARGET</span>
+                        </div>
+                        <div style="font-size:0.78rem; color:#94A3B8; font-family:'JetBrains Mono'; margin-top:0.1rem;">
+                            <code>{active_repo.root_path}</code>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:1.3rem; align-items:center; font-family:'JetBrains Mono'; font-size:0.82rem; color:#E2E8F0;">
+                    <div>📄 <strong>{active_repo.file_count}</strong> files</div>
+                    <div>🧩 <strong>{active_repo.code_unit_count}</strong> CodeUnits</div>
+                    <div>🕸️ <strong>{active_repo.graph_edge_count}</strong> connections</div>
+                </div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     else:
-        demo_col1, demo_col2 = st.columns([5, 2], vertical_alignment="center")
-        with demo_col1:
-            st.markdown(
-                '<div class="rl-demo"><strong>DEMONSTRATION MODE</strong> — '
-                "No custom repository is loaded. Responses use illustrative prototype data. "
-                "Load a live Python repository in the Repositories workspace for real codebase analysis.</div>",
-                unsafe_allow_html=True,
+        st.markdown(
+            """
+            <div class="rl-demo-banner">
+                <div style="display:flex; align-items:center; gap:0.7rem;">
+                    <span style="font-size:1.1rem;">⚡</span>
+                    <div>
+                        <div style="font-size:0.95rem; font-weight:700; color:#F8FAFC;">
+                            Quick-Start: Select a canonical repository to load & investigate
+                        </div>
+                        <div style="font-size:0.78rem; color:#FBBF24;">
+                            Choose a bundled repository below, or provide a custom local path / Git repository.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        qb_cols = st.columns([1, 1, 1, 1, 1, 1.4])
+        with qb_cols[0]:
+            if st.button(
+                "📦 click",
+                key="btn_quick_click",
+                use_container_width=True,
+                help="Click CLI (91 files)",
+            ):
+                _trigger_repository_loading("dataset/repositories/click")
+        with qb_cols[1]:
+            if st.button(
+                "📦 flask",
+                key="btn_quick_flask",
+                use_container_width=True,
+                help="Flask (54 files)",
+            ):
+                _trigger_repository_loading("dataset/repositories/flask")
+        with qb_cols[2]:
+            if st.button(
+                "📦 requests",
+                key="btn_quick_requests",
+                use_container_width=True,
+                help="Requests (32 files)",
+            ):
+                _trigger_repository_loading("dataset/repositories/requests")
+        with qb_cols[3]:
+            if st.button(
+                "📦 fastapi",
+                key="btn_quick_fastapi",
+                use_container_width=True,
+                help="FastAPI (68 files)",
+            ):
+                _trigger_repository_loading("dataset/repositories/fastapi")
+        with qb_cols[4]:
+            if st.button(
+                "📦 pydantic",
+                key="btn_quick_pydantic",
+                use_container_width=True,
+                help="Pydantic (82 files)",
+            ):
+                _trigger_repository_loading("dataset/repositories/pydantic")
+        with qb_cols[5]:
+            st.button(
+                "📂 Custom path...",
+                key="btn_demo_ingest",
+                on_click=navigate_to,
+                args=("Repositories",),
+                use_container_width=True,
             )
-        with demo_col2:
-            if st.button("📂 Ingest a repository", use_container_width=True):
-                navigate_to("Repositories")
-                st.rerun()
 
     preset = config.get("preset_query", "Custom question")
     default_text = "" if preset == "Custom question" else preset
 
+    st.markdown(
+        '<div style="font-size:0.78rem; font-weight:600; color:#94A3B8; margin-top:0.8rem; margin-bottom:0.35rem;">'
+        "💡 Suggested query templates (click to apply):</div>",
+        unsafe_allow_html=True,
+    )
+    c1, c2, c3, c4 = st.columns(4)
+    with c1:
+        st.button(
+            "Where is Command defined?",
+            key="chip_q1",
+            on_click=_set_query_prompt,
+            args=("Where is the Command class defined and what are its methods?",),
+            use_container_width=True,
+        )
+    with c2:
+        st.button(
+            "How does Group route commands?",
+            key="chip_q2",
+            on_click=_set_query_prompt,
+            args=("How does Group route and invoke subcommands?",),
+            use_container_width=True,
+        )
+    with c3:
+        st.button(
+            "How does BM25 score code?",
+            key="chip_q3",
+            on_click=_set_query_prompt,
+            args=(
+                "Explain how BM25 lexical retriever tokenizes source code and scores queries",
+            ),
+            use_container_width=True,
+        )
+    with c4:
+        st.button(
+            "How does CodeGraph build edges?",
+            key="chip_q4",
+            on_click=_set_query_prompt,
+            args=(
+                "How does CodeGraph build relationships between functions and classes?",
+            ),
+            use_container_width=True,
+        )
+
     query = st.text_area(
         "Ask a repository-level question",
         value=default_text,
-        height=100,
-        placeholder=(
-            "For example: Where is the retrieval index constructed, "
-            "and which components invoke it?"
-        ),
+        height=95,
+        placeholder="For example: Where is Command defined, and which functions call invoke()?",
         key="investigation_query",
     )
 
-    run_col, clear_col, _spacer = st.columns([1.5, 1, 5])
+    run_col, clear_col, mode_col = st.columns(
+        [1.8, 1, 3.8], vertical_alignment="center"
+    )
 
     with run_col:
         run_clicked = st.button(
-            "🔍 Investigate",
+            "🔍 Run Investigation",
             type="primary",
             use_container_width=True,
         )
@@ -213,6 +338,14 @@ def render_investigations(config: dict[str, Any]) -> None:
         clear_clicked = st.button(
             "Clear result",
             use_container_width=True,
+        )
+
+    with mode_col:
+        baseline_name = config.get("baseline_mode", "B5: Full RepoLens")
+        st.markdown(
+            f"<div style=\"text-align:right; font-size:0.8rem; color:#94A3B8; font-family:'JetBrains Mono';\">"
+            f'Active Mode: <strong style="color:#38BDF8;">{baseline_name}</strong></div>',
+            unsafe_allow_html=True,
         )
 
     if clear_clicked:
@@ -561,13 +694,17 @@ def _trigger_repository_loading(source_target: str) -> None:
 def render_repositories(config: dict[str, Any]) -> None:
     """Render repository selection, loading, and configuration interface."""
     st.markdown(
-        '<div class="rl-eyebrow">REPOSITORY SELECTION & CONFIGURATION</div>',
-        unsafe_allow_html=True,
-    )
-    st.title("Repository workspace")
-    st.markdown(
-        '<p class="rl-muted">Select, ingest, and inspect Python repositories for structured '
-        "code understanding, AST symbol extraction, and relationship mapping.</p>",
+        """
+        <div style="margin-bottom: 1.2rem;">
+            <div class="rl-eyebrow">REPOSITORY SELECTION & INGESTION</div>
+            <h1 style="font-size: 1.85rem; font-weight: 800; margin: 0.2rem 0; color: #F8FAFC; letter-spacing: -0.03em;">
+                Repository Manager & Code Inventory
+            </h1>
+            <div class="rl-description" style="font-size: 0.88rem;">
+                Select, ingest, and inspect Python repositories for AST symbol extraction, code graph construction, and lexical-semantic indexing.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -613,11 +750,14 @@ def render_repositories(config: dict[str, Any]) -> None:
                 st.session_state["active_repository"] = None
                 st.rerun()
         with btn_cols[2]:
-            if st.button(
-                "🔍 Investigate codebase →", type="primary", use_container_width=True
-            ):
-                navigate_to("Investigations")
-                st.rerun()
+            st.button(
+                "🔍 Investigate codebase →",
+                key="btn_active_investigate",
+                type="primary",
+                on_click=navigate_to,
+                args=("Investigations",),
+                use_container_width=True,
+            )
 
         st.divider()
         detail_tabs = st.tabs(
@@ -803,10 +943,19 @@ def render_repositories(config: dict[str, Any]) -> None:
 
 def render_overview() -> None:
     """Render high-level architecture overview page."""
-    st.markdown("## Architecture & design principles")
-    st.write(
-        "RepoLens is designed for deep code investigation, minimizing hallucinations "
-        "by coupling static code-graph indexing with LangGraph multi-step reasoning."
+    st.markdown(
+        """
+        <div style="margin-bottom: 1.2rem;">
+            <div class="rl-eyebrow">SYSTEM ARCHITECTURE & METHODOLOGY</div>
+            <h1 style="font-size: 1.85rem; font-weight: 800; margin: 0.2rem 0; color: #F8FAFC; letter-spacing: -0.03em;">
+                Architecture & Design Principles
+            </h1>
+            <div class="rl-description" style="font-size: 0.88rem;">
+                RepoLens eliminates code understanding hallucinations by coupling AST-level CodeUnits, hybrid retrieval, NetworkX graph expansion, and strict disk citation verification.
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
     card_col1, card_col2, card_col3 = st.columns(3)
@@ -882,11 +1031,17 @@ def render_overview() -> None:
 def render_code_graph(config: dict[str, Any]) -> None:
     """Render structural code relationship graph view."""
     st.markdown(
-        '<div class="rl-eyebrow">GRAPH INTELLIGENCE</div>', unsafe_allow_html=True
-    )
-    st.title("Code relationship graph")
-    st.markdown(
-        '<p class="rl-muted">Explore structural connections: imports, function calls, and symbol inheritance.</p>',
+        """
+        <div style="margin-bottom: 1.2rem;">
+            <div class="rl-eyebrow">STRUCTURAL GRAPH TOPOLOGY</div>
+            <h1 style="font-size: 1.85rem; font-weight: 800; margin: 0.2rem 0; color: #F8FAFC; letter-spacing: -0.03em;">
+                Code Relationship Graph
+            </h1>
+            <div class="rl-description" style="font-size: 0.88rem;">
+                Explore structural dependencies across functions, classes, modules, callers, and inheritance hierarchies.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -978,20 +1133,28 @@ def render_code_graph(config: dict[str, Any]) -> None:
         ]
         st.dataframe(sample_edges, use_container_width=True, hide_index=True)
 
-        if st.button("📂 Load a real repository now", key="btn_graph_load_repo"):
-            navigate_to("Repositories")
-            st.rerun()
+        st.button(
+            "📂 Load a real repository now",
+            key="btn_graph_load_repo",
+            on_click=navigate_to,
+            args=("Repositories",),
+        )
 
 
 def render_evaluation(config: dict[str, Any]) -> None:
     """Render evaluation benchmark dashboard."""
     st.markdown(
-        '<div class="rl-eyebrow">BENCHMARKING & ABLATION</div>', unsafe_allow_html=True
-    )
-    st.title("Evaluation & baseline benchmarking")
-    st.markdown(
-        '<p class="rl-muted">Quantitative comparison of RepoLens against standard retrieval baselines '
-        "across precision, evidence coverage, latency, and cost.</p>",
+        """
+        <div style="margin-bottom: 1.2rem;">
+            <div class="rl-eyebrow">EMPIRICAL BENCHMARKS & RESEARCH FINDINGS</div>
+            <h1 style="font-size: 1.85rem; font-weight: 800; margin: 0.2rem 0; color: #F8FAFC; letter-spacing: -0.03em;">
+                Evaluation & Baseline Benchmarking
+            </h1>
+            <div class="rl-description" style="font-size: 0.88rem;">
+                Quantitative evaluation of RepoLens against standard retrieval baselines (B0 to B5) across 100 queries on 5 canonical codebases.
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
@@ -1184,13 +1347,16 @@ def main() -> None:
     """Main application entry point."""
     st.set_page_config(
         page_title="RepoLens | Repository Investigation",
-        page_icon="🔍",
+        page_icon=str(ICON_PATH) if ICON_PATH.exists() else "🔍",
         layout="wide",
         initial_sidebar_state="expanded",
     )
 
     apply_theme()
     init_session_state()
+
+    if st.session_state.get("pending_navigation"):
+        st.session_state["rl_navigation"] = st.session_state.pop("pending_navigation")
 
     config = render_sidebar()
     current_page = config.get("page", "Investigations")

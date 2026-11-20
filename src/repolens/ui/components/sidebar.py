@@ -1,11 +1,22 @@
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
 import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
+
+CANDIDATE_LOGO_PATHS = [
+    PROJECT_ROOT / "assets" / "LOGO.png",
+    Path.cwd() / "assets" / "LOGO.png",
+]
+LOGO_PATH = next(
+    (p for p in CANDIDATE_LOGO_PATHS if p.exists()),
+    PROJECT_ROOT / "assets" / "LOGO.png",
+)
+
 CANDIDATE_ICON_PATHS = [
     PROJECT_ROOT / "assets" / "ICON.png",
     Path.cwd() / "assets" / "ICON.png",
@@ -40,6 +51,19 @@ PRESET_QUERIES: list[str] = [
 ]
 
 
+def _set_pending_nav(page: str) -> None:
+    """Set navigation page for the next Streamlit run."""
+    st.session_state["pending_navigation"] = page
+    with contextlib.suppress(Exception):
+        st.session_state["rl_navigation"] = page
+
+
+def _switch_repo() -> None:
+    """Clear active repository and navigate to Repositories workspace."""
+    st.session_state["active_repository"] = None
+    _set_pending_nav("Repositories")
+
+
 def render_sidebar() -> dict[str, Any]:
     """Render the RepoLens repository and investigation control panel.
 
@@ -47,14 +71,25 @@ def render_sidebar() -> dict[str, Any]:
         dict[str, Any]: Dictionary containing current navigation page and configuration.
     """
     with st.sidebar:
-        if ICON_PATH.exists():
+        if LOGO_PATH.exists():
+            st.image(str(LOGO_PATH), width=180)
+            st.caption("Repository Intelligence Workbench")
+        elif ICON_PATH.exists():
             st.image(str(ICON_PATH), width=48)
+            st.markdown("## RepoLens")
+            st.caption("Repository Intelligence Workbench")
+        else:
+            st.markdown("## RepoLens")
+            st.caption("Repository Intelligence Workbench")
 
-        st.markdown("## RepoLens")
-        st.caption("Repository Intelligence Workbench")
         st.divider()
 
         st.markdown("##### WORKSPACE")
+        if st.session_state.get("pending_navigation"):
+            st.session_state["rl_navigation"] = st.session_state.pop(
+                "pending_navigation"
+            )
+
         page = st.radio(
             "Navigation",
             options=[
@@ -100,16 +135,20 @@ def render_sidebar() -> dict[str, Any]:
 
             col_manage, col_switch = st.columns(2)
             with col_manage:
-                if st.button(
-                    "Manage repo", key="sb_btn_manage", use_container_width=True
-                ):
-                    st.session_state["rl_navigation"] = "Repositories"
-                    st.rerun()
+                st.button(
+                    "Manage repo",
+                    key="sb_btn_manage",
+                    on_click=_set_pending_nav,
+                    args=("Repositories",),
+                    use_container_width=True,
+                )
             with col_switch:
-                if st.button("Switch", key="sb_btn_switch", use_container_width=True):
-                    st.session_state["active_repository"] = None
-                    st.session_state["rl_navigation"] = "Repositories"
-                    st.rerun()
+                st.button(
+                    "Switch",
+                    key="sb_btn_switch",
+                    on_click=_switch_repo,
+                    use_container_width=True,
+                )
 
             selected_repo = active_repo.name
             repo_mode = active_repo.source_type
@@ -145,13 +184,13 @@ def render_sidebar() -> dict[str, Any]:
                 ).strip()
                 st.caption("Clone and load in the Repositories workspace.")
 
-            if st.button(
+            st.button(
                 "📂 Load in Repositories",
                 key="sb_btn_goto_repos",
+                on_click=_set_pending_nav,
+                args=("Repositories",),
                 use_container_width=True,
-            ):
-                st.session_state["rl_navigation"] = "Repositories"
-                st.rerun()
+            )
 
         st.divider()
         st.markdown("##### INDEXED STATISTICS")
