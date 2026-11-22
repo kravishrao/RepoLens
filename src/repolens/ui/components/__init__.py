@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from repolens.ui.components.cards import render_feature_card
+from repolens.ui.components.cards import (
+    render_feature_card,
+    render_kpi_card,
+    render_kpi_row,
+)
 from repolens.ui.components.header import render_header
 from repolens.ui.components.results import (
     render_answer_card,
@@ -22,6 +26,8 @@ __all__ = [
     "render_findings_section",
     "render_header",
     "render_investigation_trace",
+    "render_kpi_card",
+    "render_kpi_row",
     "render_overview_metrics",
     "render_sidebar",
 ]

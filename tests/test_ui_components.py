@@ -11,6 +11,8 @@ from repolens.ui.components import (
     render_evidence_viewer,
     render_findings_section,
     render_investigation_trace,
+    render_kpi_card,
+    render_kpi_row,
     render_overview_metrics,
 )
 from repolens.ui.presentation import (
@@ -241,3 +243,35 @@ def test_render_empty_or_failed_state():
         render_empty_or_failed_state(data)
         assert mock_err.called
         assert mock_warn.called
+
+
+def test_render_kpi_card():
+    card_html = render_kpi_card(
+        title="CODEUNITS",
+        value="1,240",
+        subtitle="AST Functions",
+        variant="coral",
+        badge_text="AST",
+    )
+    assert "rl-kpi-card" in card_html
+    assert "rl-kpi-coral" in card_html
+    assert "CODEUNITS" in card_html
+    assert "1,240" in card_html
+    assert "AST Functions" in card_html
+    assert "AST" in card_html
+
+
+def test_render_kpi_row():
+    cards = [
+        {"title": "C1", "value": "10", "subtitle": "S1", "variant": "coral"},
+        {"title": "C2", "value": "20", "subtitle": "S2", "variant": "cyan"},
+    ]
+    with patch("streamlit.markdown") as mock_md:
+        render_kpi_row(cards)
+        assert mock_md.called
+        rendered = mock_md.call_args[0][0]
+        assert "rl-kpi-grid" in rendered
+        assert "rl-kpi-coral" in rendered
+        assert "rl-kpi-cyan" in rendered
+        assert "C1" in rendered
+        assert "C2" in rendered

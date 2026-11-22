@@ -46,34 +46,26 @@ def render_overview_metrics(data: PresentationData) -> None:
 
 def render_answer_card(data: PresentationData) -> None:
     """Render the main generated answer in a prominent readable container."""
-    st.subheader("💡 Grounded Answer")
+    st.subheader("Grounded Answer")
 
     if not data.final_answer or not data.has_evidence:
         render_empty_or_failed_state(data)
         return
 
-    # Status pill container
+    # Clean status details
     status_label = "Complete" if data.is_complete else "In Progress"
-    status_emoji = (
-        "🟢"
-        if data.evidence_status == "sufficient"
-        else "⚠️"
-        if data.evidence_status == "conflicting"
-        else "🟡"
-        if data.evidence_status == "uncertain"
-        else "🔴"
-    )
+    certainty_label = data.evidence_status.upper()
     st.caption(
         f"**Question:** {data.query or 'General inquiry'} | "
         f"**Status:** `{status_label}` | "
-        f"**Evidence Certainty:** `{status_emoji} {data.evidence_status.upper()}` | "
+        f"**Evidence Certainty:** `{certainty_label}` | "
         f"**Termination Reason:** `{data.termination_reason}`"
     )
 
     # Highlight conflicting evidence if detected
     if data.is_conflicting and data.conflicts:
         with st.container(border=True):
-            st.warning("⚠️ **Conflicting Repository Evidence Detected**")
+            st.warning("Conflicting Repository Evidence Detected")
             st.markdown(
                 "Multiple contradictory definitions, signatures, or declarations were discovered:"
             )
@@ -89,7 +81,7 @@ def render_answer_card(data: PresentationData) -> None:
 
 def render_findings_section(data: PresentationData) -> None:
     """Render structured code findings, separating supported from inferred elements."""
-    st.subheader("🔍 Code Findings & Citations")
+    st.subheader("Code Findings & Citations")
 
     if not data.has_evidence:
         st.info("No code elements were identified during this investigation.")
@@ -97,8 +89,8 @@ def render_findings_section(data: PresentationData) -> None:
 
     tab_supported, tab_inferred, tab_all = st.tabs(
         [
-            f"🟢 Supported Findings ({len(data.supported_findings)})",
-            f"🟡 Inferred / Referenced Elements ({len(data.inferred_findings)})",
+            f"Verified Findings ({len(data.supported_findings)})",
+            f"Graph Context ({len(data.inferred_findings)})",
             f"All Findings ({len(data.all_evidence)})",
         ]
     )
@@ -137,22 +129,22 @@ def _render_findings_list(
             col_sym, col_loc, col_kind = st.columns([3, 3, 2])
 
             with col_sym:
-                badge = "🟢 Inspected" if item.is_supported else "🟡 Inferred"
+                badge = "VERIFIED" if item.is_supported else "INFERRED"
                 st.markdown(f"**{idx}. `{item.qualified_name}`** ({badge})")
 
             with col_loc:
-                st.markdown(f"📁 `{item.file_path}` ({item.line_reference})")
+                st.markdown(f"`{item.file_path}` ({item.line_reference})")
 
             with col_kind:
                 st.caption(f"Kind: `{item.kind}` | Source: `{item.source}`")
 
             if item.docstring:
-                st.caption(f"📝 *Docstring:* {item.docstring}")
+                st.caption(f"*Docstring:* {item.docstring}")
 
 
 def render_evidence_viewer(data: PresentationData) -> None:
     """Provide an expandable evidence viewer with syntax-highlighted code snippets."""
-    st.subheader("📄 Relevant Code Evidence Viewer")
+    st.subheader("Source Code Evidence")
 
     if not data.all_evidence:
         st.info("No source code snippets available.")
@@ -164,10 +156,10 @@ def render_evidence_viewer(data: PresentationData) -> None:
     )
 
     for idx, item in enumerate(data.all_evidence, start=1):
-        support_tag = "🟢 Inspected" if item.is_supported else "🟡 Inferred"
+        support_tag = "VERIFIED" if item.is_supported else "INFERRED"
         expander_title = (
             f"[{idx}] {item.qualified_name} ({item.kind}) — "
-            f"{item.file_path} ({item.line_reference}) {support_tag}"
+            f"{item.file_path} ({item.line_reference}) [{support_tag}]"
         )
 
         with st.expander(expander_title, expanded=(idx == 1 and item.is_supported)):
@@ -199,7 +191,7 @@ def render_evidence_viewer(data: PresentationData) -> None:
 
 def render_citation_validation(data: PresentationData) -> None:
     """Display citation-validation outcomes, checks checklist, and detected issues."""
-    st.subheader("🛡️ Source Citation Validation")
+    st.subheader("Citation Verification")
 
     val = data.validation_summary
 
@@ -213,12 +205,12 @@ def render_citation_validation(data: PresentationData) -> None:
     # Validation summary banner
     if val.overall_status == "valid":
         st.success(
-            f"✅ **Validation Passed**: All {val.citation_count} extracted citations are verified "
+            f"Validation Passed: All {val.citation_count} extracted citations are verified "
             "against source files and AST symbols."
         )
     elif val.overall_status in {"invalid", "incomplete"}:
         st.warning(
-            f"⚠️ **Validation Status: {val.overall_status.upper()}**: "
+            f"Validation Status: {val.overall_status.upper()}: "
             f"{val.valid_citation_count}/{val.citation_count} citations valid, "
             f"{val.invalid_citation_count} invalid, {val.incomplete_citation_count} incomplete."
         )
@@ -251,19 +243,19 @@ def render_citation_validation(data: PresentationData) -> None:
                 # Checklist
                 c1, c2, c3, c4, c5 = st.columns(5)
                 c1.markdown(
-                    f"File Exists: {'✅' if cit.file_exists else '❌' if cit.file_exists is False else '⚪'}"
+                    f"File Exists: {'[PASS]' if cit.file_exists else '[FAIL]' if cit.file_exists is False else '[N/A]'}"
                 )
                 c2.markdown(
-                    f"Safe Path: {'✅' if cit.path_is_safe else '❌' if cit.path_is_safe is False else '⚪'}"
+                    f"Safe Path: {'[PASS]' if cit.path_is_safe else '[FAIL]' if cit.path_is_safe is False else '[N/A]'}"
                 )
                 c3.markdown(
-                    f"Lines Valid: {'✅' if cit.line_range_valid else '❌' if cit.line_range_valid is False else '⚪'}"
+                    f"Lines Valid: {'[PASS]' if cit.line_range_valid else '[FAIL]' if cit.line_range_valid is False else '[N/A]'}"
                 )
                 c4.markdown(
-                    f"Symbol Found: {'✅' if cit.symbol_found else '❌' if cit.symbol_found is False else '⚪'}"
+                    f"Symbol Found: {'[PASS]' if cit.symbol_found else '[FAIL]' if cit.symbol_found is False else '[N/A]'}"
                 )
                 c5.markdown(
-                    f"Unit Matched: {'✅' if cit.code_unit_found else '❌' if cit.code_unit_found is False else '⚪'}"
+                    f"Unit Matched: {'[PASS]' if cit.code_unit_found else '[FAIL]' if cit.code_unit_found is False else '[N/A]'}"
                 )
 
                 # Issues
@@ -276,8 +268,8 @@ def render_citation_validation(data: PresentationData) -> None:
     if data.claims:
         st.markdown("#### Factual Location Claims")
         for cl in data.claims:
-            icon = "✅" if cl.status == "valid" else "❌"
-            st.markdown(f"- {icon} **Claim:** {cl.claim} (`{cl.status}`)")
+            icon = "[PASS]" if cl.status == "valid" else "[FAIL]"
+            st.markdown(f"- **{icon}** Claim: {cl.claim} (`{cl.status}`)")
             if cl.issues:
                 for iss in cl.issues:
                     st.caption(f"  * Issue: {iss.get('message')}")
@@ -285,7 +277,7 @@ def render_citation_validation(data: PresentationData) -> None:
 
 def render_investigation_trace(data: PresentationData) -> None:
     """Show the investigation trace, including executed tools and relevant findings."""
-    st.subheader("⏱️ Agent Investigation Trace")
+    st.subheader("Agent Execution Trace")
 
     # Executed tools overview
     if data.executed_tools:
@@ -300,7 +292,7 @@ def render_investigation_trace(data: PresentationData) -> None:
     st.markdown("#### Step-by-Step Tool Invocations")
 
     for step in data.trace_steps:
-        status_icon = "✅" if step.status == "success" else "❌"
+        status_label = "[PASS]" if step.status == "success" else "[FAIL]"
         duration_s = round(step.duration_ms / 1000.0, 3)
 
         with st.container(border=True):
@@ -310,7 +302,7 @@ def render_investigation_trace(data: PresentationData) -> None:
                 st.markdown(f"**Iter {step.iteration}**")
 
             with col_tool:
-                st.markdown(f"{status_icon} `{step.tool}`")
+                st.markdown(f"{status_label} `{step.tool}`")
 
             with col_perf:
                 st.caption(f"Duration: `{duration_s}s` ({step.duration_ms} ms)")
@@ -330,13 +322,13 @@ def render_investigation_trace(data: PresentationData) -> None:
 def render_empty_or_failed_state(data: PresentationData) -> None:
     """Render graceful warning or error message when evidence is missing or investigation failed."""
     if data.has_errors:
-        st.error("⚠️ **Investigation Encountered Errors**")
+        st.error("Investigation Encountered Errors")
         st.markdown("The agent encountered errors while executing repository tools:")
         for err in data.errors:
             st.markdown(f"- **`{err['tool']}`**: {err['error']}")
 
     if not data.has_evidence or data.evidence_status == "insufficient":
-        st.warning("⚠️ **Insufficient Code Evidence Discovered**")
+        st.warning("Insufficient Code Evidence Discovered")
         reason_text = (
             "\n".join(f"- {r}" for r in data.insufficient_reasons)
             if data.insufficient_reasons
