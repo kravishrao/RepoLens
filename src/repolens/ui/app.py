@@ -176,109 +176,28 @@ def render_investigations(config: dict[str, Any]) -> None:
     )
 
     if active_repo is not None:
-        render_kpi_row(
-            [
-                {
-                    "title": "ACTIVE TARGET FILES",
-                    "value": str(active_repo.file_count),
-                    "subtitle": f"{active_repo.name} source files",
-                    "variant": "coral",
-                    "badge_text": "PY",
-                },
-                {
-                    "title": "INDEXED CODEUNITS",
-                    "value": str(active_repo.code_unit_count),
-                    "subtitle": "Functions, Classes & Methods",
-                    "variant": "cyan",
-                    "badge_text": "AST",
-                },
-                {
-                    "title": "GRAPH CONNECTIONS",
-                    "value": str(active_repo.graph_edge_count),
-                    "subtitle": "Calls, Imports & Hierarchy",
-                    "variant": "emerald",
-                    "badge_text": "REL",
-                },
-                {
-                    "title": "VERIFICATION MODE",
-                    "value": "100%",
-                    "subtitle": "Ground-Truth AST Validation",
-                    "variant": "purple",
-                    "badge_text": "VLD",
-                },
-            ]
-        )
         st.markdown(
             f"""
-            <div class="rl-active-banner">
-                <div style="display:flex; align-items:center; gap:0.8rem;">
-                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#34D399; box-shadow:0 0 10px #34D399;"></span>
-                    <div>
-                        <div style="font-size:1.05rem; font-weight:700; color:#F8FAFC;">
-                            {active_repo.name}
-                            <span style="font-size:0.72rem; color:#34D399; font-weight:600; margin-left:0.4rem; padding:0.15rem 0.5rem; background:rgba(52,211,153,0.15); border-radius:12px; font-family:'JetBrains Mono';">ACTIVE TARGET</span>
-                        </div>
-                        <div style="font-size:0.78rem; color:#94A3B8; font-family:'JetBrains Mono'; margin-top:0.1rem;">
-                            <code>{active_repo.root_path}</code>
-                        </div>
-                    </div>
+            <div class="rl-target-bar">
+                <div style="display:flex; align-items:center; gap:0.65rem;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#34D399;"></span>
+                    <strong style="color:#F8FAFC;">{active_repo.name}</strong>
+                    <span style="color:#64748B;">· {active_repo.file_count} files · {active_repo.code_unit_count} CodeUnits · {active_repo.graph_edge_count} relationships</span>
                 </div>
-                <div style="display:flex; gap:1.3rem; align-items:center; font-family:'JetBrains Mono'; font-size:0.82rem; color:#E2E8F0;">
-                    <div><strong>{active_repo.file_count}</strong> files</div>
-                    <div><strong>{active_repo.code_unit_count}</strong> CodeUnits</div>
-                    <div><strong>{active_repo.graph_edge_count}</strong> connections</div>
-                </div>
+                <div style="font-family:'JetBrains Mono'; font-size:0.75rem; color:#94A3B8;"><code>{active_repo.root_path}</code></div>
             </div>
             """,
             unsafe_allow_html=True,
         )
     else:
-        render_kpi_row(
-            [
-                {
-                    "title": "BENCHMARK REPOSITORIES",
-                    "value": "5",
-                    "subtitle": "Flask, Requests, FastAPI, Click, Pydantic",
-                    "variant": "coral",
-                    "badge_text": "REPO",
-                },
-                {
-                    "title": "GOLD EVALUATION QUERIES",
-                    "value": "100",
-                    "subtitle": "Standardized Ground-Truth Suite",
-                    "variant": "cyan",
-                    "badge_text": "Q&A",
-                },
-                {
-                    "title": "CITATION GROUND TRUTH",
-                    "value": "99.4%",
-                    "subtitle": "Zero Hallucination Guarantee",
-                    "variant": "emerald",
-                    "badge_text": "PASS",
-                },
-                {
-                    "title": "PIPELINE RECALL@5",
-                    "value": "95.6%",
-                    "subtitle": "Ablation Baseline B5",
-                    "variant": "purple",
-                    "badge_text": "B5",
-                },
-            ]
-        )
         st.markdown(
             """
-            <div class="rl-demo-banner">
-                <div style="display:flex; align-items:center; gap:0.7rem;">
-                    <span style="display:inline-block; width:10px; height:10px; border-radius:50%; background:#FBBF24;"></span>
-                    <div>
-                        <div style="font-size:0.95rem; font-weight:700; color:#F8FAFC;">
-                            Quick-Start: Select a canonical repository to load & investigate
-                        </div>
-                        <div style="font-size:0.78rem; color:#FBBF24;">
-                            Choose a bundled repository below, or provide a custom local path / Git repository.
-                        </div>
-                    </div>
+            <div class="rl-target-bar">
+                <div style="display:flex; align-items:center; gap:0.6rem;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#FBBF24;"></span>
+                    <span style="color:#F8FAFC; font-weight:600;">Select a benchmark repository to explore:</span>
                 </div>
+                <span style="font-size:0.75rem; color:#94A3B8;">Pre-indexed Python codebases</span>
             </div>
             """,
             unsafe_allow_html=True,
@@ -361,12 +280,10 @@ def render_investigations(config: dict[str, Any]) -> None:
         )
     with c3:
         st.button(
-            "How does BM25 score code?",
+            "Where is chunking implemented?",
             key="chip_q3",
             on_click=_set_query_prompt,
-            args=(
-                "Explain how BM25 lexical retriever tokenizes source code and scores queries",
-            ),
+            args=("Where is chunking implemented in the project?",),
             width="stretch",
         )
     with c4:
@@ -395,6 +312,7 @@ def render_investigations(config: dict[str, Any]) -> None:
     with run_col:
         run_clicked = st.button(
             "Run Investigation",
+            key="btn_run_investigation",
             type="primary",
             width="stretch",
         )
@@ -402,6 +320,7 @@ def render_investigations(config: dict[str, Any]) -> None:
     with clear_col:
         clear_clicked = st.button(
             "Clear result",
+            key="btn_clear_result",
             width="stretch",
         )
 
@@ -454,8 +373,25 @@ def render_investigations(config: dict[str, Any]) -> None:
                         max_iterations=config.get("max_agent_steps", 4),
                         max_evidence=config.get("top_k", 20),
                     )
-                    st.session_state["investigation_state"] = state
-                    st.session_state["latest_result"] = None
+                    if state.get("evidence"):
+                        st.session_state["investigation_state"] = state
+                        st.session_state["latest_result"] = None
+                    else:
+                        result = run_repolens_query(
+                            repo_name=target_name,
+                            query=query.strip(),
+                            baseline_mode=config.get(
+                                "baseline_mode", "B5: Full RepoLens"
+                            ),
+                            top_k=config.get("top_k", 5),
+                            max_hops=config.get("max_hops", 2),
+                            enable_reranker=config.get("enable_reranker", True),
+                            enable_verification=config.get("enable_verification", True),
+                            max_agent_steps=config.get("max_agent_steps", 8),
+                            active_repo=active_repo,
+                        )
+                        st.session_state["latest_result"] = result
+                        st.session_state["investigation_state"] = None
                     st.session_state["latest_query"] = query.strip()
                     st.session_state["latest_repo"] = target_name
                 except Exception:

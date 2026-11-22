@@ -302,52 +302,36 @@ def apply_theme() -> None:
             border: 1px solid rgba(148, 163, 184, 0.22);
         }
 
-        /* Sidebar Profile / Session Header */
-        .rl-profile-widget {
+        /* Clean Target Bar & Status Indicators */
+        .rl-target-bar {
             display: flex;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.7rem 0.85rem;
-            background: rgba(20, 26, 40, 0.65);
+            justify-content: space-between;
+            padding: 0.7rem 1.1rem;
+            background: rgba(18, 23, 34, 0.8);
             border: 1px solid var(--rl-border);
-            border-radius: 12px;
-            margin-bottom: 1.1rem;
-        }
-
-        .rl-avatar {
-            width: 36px;
-            height: 36px;
             border-radius: 10px;
-            background: linear-gradient(135deg, #0284C7 0%, #4F46E5 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
+            margin-bottom: 1.2rem;
             font-size: 0.85rem;
-            color: #FFFFFF;
-            letter-spacing: -0.02em;
         }
 
-        .rl-profile-info {
-            display: flex;
-            flex-direction: column;
-            gap: 0.1rem;
-        }
-
-        .rl-profile-name {
-            font-size: 0.86rem;
-            font-weight: 700;
-            color: var(--rl-text);
-            line-height: 1.2;
-        }
-
-        .rl-profile-status {
-            font-size: 0.72rem;
-            color: #34D399;
-            display: flex;
+        .rl-chip {
+            display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            font-weight: 600;
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--rl-border);
+            border-radius: 6px;
+            font-size: 0.8rem;
+            color: var(--rl-secondary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .rl-chip:hover {
+            background: rgba(56, 189, 248, 0.12);
+            border-color: var(--rl-cyan);
+            color: var(--rl-text);
         }
 
         /* Banner Components */

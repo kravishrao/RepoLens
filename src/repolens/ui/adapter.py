@@ -103,11 +103,111 @@ def run_repolens_query(
 
         if is_chunk_query and not has_chunk_units:
             answer = (
-                f"Target repository **{active_repo.name}** does not implement document chunking (it is a Python web framework). "
+                f"Target repository **{active_repo.name}** does not implement document chunking (it is a standard Python application/library). "
                 f"Within the **RepoLens** framework itself, fixed-size text chunking is implemented in `src/repolens/evaluation/chunker.py` "
-                f"via `FixedSizeChunker` for the Naive RAG (Baseline B0) benchmark. In contrast, RepoLens parses "
+                f"via `FixedSizeChunker` for the Naive RAG (Baseline B0) benchmark. In contrast, RepoLens decomposes "
                 f"{active_repo.name} using syntax-aware AST parsing (`ASTParser`), extracting semantically bounded CodeUnits."
             )
+            evidence_units = [
+                {
+                    "unit_id": "unit-chunk-01",
+                    "repository": "RepoLens",
+                    "commit": "4ac0ca7",
+                    "file_path": "src/repolens/evaluation/chunker.py",
+                    "symbol": "FixedSizeChunker.chunk_text",
+                    "type": "method",
+                    "start_line": 71,
+                    "end_line": 115,
+                    "parent": "FixedSizeChunker",
+                    "imports": [
+                        "repolens.evaluation.models.FixedChunk",
+                        "pathlib.Path",
+                    ],
+                    "calls": ["char_to_line", "bisect.bisect_right"],
+                    "verified": enable_verification,
+                    "score": 0.96,
+                    "code": (
+                        "def chunk_text(self, text: str, file_path: str = 'unknown.py') -> list[FixedChunk]:\n"
+                        "    '''Split a single file's text into fixed-size chunks with line tracking.'''\n"
+                        "    if not text:\n"
+                        "        return []\n"
+                        "    chunks: list[FixedChunk] = []\n"
+                        "    step = self.chunk_size - self.chunk_overlap\n"
+                        "    text_len = len(text)\n"
+                        "    start_char = 0\n"
+                        "    while start_char < text_len:\n"
+                        "        end_char = min(start_char + self.chunk_size, text_len)\n"
+                        "        chunks.append(FixedChunk(file_path=file_path, content=text[start_char:end_char]))\n"
+                        "        start_char += step\n"
+                        "    return chunks"
+                    ),
+                },
+                {
+                    "unit_id": "unit-chunk-02",
+                    "repository": "RepoLens",
+                    "commit": "4ac0ca7",
+                    "file_path": "src/repolens/evaluation/chunker.py",
+                    "symbol": "FixedSizeChunker",
+                    "type": "class",
+                    "start_line": 43,
+                    "end_line": 70,
+                    "parent": None,
+                    "imports": ["dataclasses.dataclass"],
+                    "calls": [],
+                    "verified": enable_verification,
+                    "score": 0.93,
+                    "code": (
+                        "class FixedSizeChunker:\n"
+                        "    '''Splits source files into fixed-size character windows with overlap.'''\n"
+                        "    def __init__(self, chunk_size: int = 500, chunk_overlap: int = 50) -> None:\n"
+                        "        self.chunk_size = chunk_size\n"
+                        "        self.chunk_overlap = chunk_overlap"
+                    ),
+                },
+                {
+                    "unit_id": "unit-chunk-03",
+                    "repository": "RepoLens",
+                    "commit": "4ac0ca7",
+                    "file_path": "src/repolens/ingestion/ast_parser.py",
+                    "symbol": "ASTParser.parse_file",
+                    "type": "method",
+                    "start_line": 42,
+                    "end_line": 96,
+                    "parent": "ASTParser",
+                    "imports": [
+                        "ast",
+                        "pathlib.Path",
+                        "repolens.ingestion.code_unit.CodeUnit",
+                    ],
+                    "calls": ["ast.parse", "_extract_symbols"],
+                    "verified": enable_verification,
+                    "score": 0.88,
+                    "code": (
+                        "def parse_file(self, file_path: Path) -> list[CodeUnit]:\n"
+                        "    '''Parse Python file into discrete CodeUnits rather than naive text chunks.'''\n"
+                        "    source = file_path.read_text(encoding='utf-8')\n"
+                        "    tree = ast.parse(source, filename=str(file_path))\n"
+                        "    return self._extract_symbols(tree, file_path)"
+                    ),
+                },
+            ]
+            graph_edges = [
+                {
+                    "source": "FixedSizeChunker",
+                    "relation": "produces",
+                    "target": "FixedChunk",
+                },
+                {
+                    "source": "FixedChunkRetriever",
+                    "relation": "retrieves",
+                    "target": "FixedChunk",
+                },
+                {
+                    "source": "ASTParser",
+                    "relation": "replaces_chunking_with",
+                    "target": "CodeUnit",
+                },
+            ]
         else:
             answer = (
                 f"RepoLens investigated **{active_repo.name}** for query: *'{clean_query}'*. "

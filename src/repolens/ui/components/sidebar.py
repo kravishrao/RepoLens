@@ -73,20 +73,6 @@ def render_sidebar() -> dict[str, Any]:
         dict[str, Any]: Dictionary containing current navigation page and configuration.
     """
     with st.sidebar:
-        # Profile / Session status widget matching modern SaaS dashboard design
-        st.markdown(
-            """
-            <div class="rl-profile-widget">
-                <div class="rl-avatar">RL</div>
-                <div class="rl-profile-info">
-                    <span class="rl-profile-name">RepoLens Engine</span>
-                    <span class="rl-profile-status">● System Online</span>
-                </div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
         if LOGO_PATH.exists():
             st.image(str(LOGO_PATH), width=180)
             st.caption("Repository Intelligence Workbench")
