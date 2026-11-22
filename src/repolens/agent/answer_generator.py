@@ -900,7 +900,7 @@ class AnswerGenerator:
             lines.extend(
                 [
                     "",
-                    "⚠️ Conflicting Evidence Identified",
+                    "Conflicting Evidence Identified",
                     "-----------------------------------",
                 ]
             )

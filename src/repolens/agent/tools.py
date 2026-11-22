@@ -90,6 +90,26 @@ class InvestigationTools:
             top_k=top_k,
         )
 
+        if not results and query:
+            # Expand derived terms (e.g., chunking -> chunk) when initial search returns no hits
+            expanded_tokens: list[str] = []
+            for token in query.split():
+                clean_t = token.strip("?,.:;!'\"()")
+                if clean_t:
+                    expanded_tokens.append(clean_t)
+                    if clean_t.lower().endswith("ing") and len(clean_t) > 4:
+                        expanded_tokens.append(clean_t[:-3])
+                    elif clean_t.lower().endswith("ed") and len(clean_t) > 4:
+                        expanded_tokens.append(clean_t[:-2])
+                    elif clean_t.lower().endswith("s") and len(clean_t) > 3:
+                        expanded_tokens.append(clean_t[:-1])
+            varied_query = " ".join(expanded_tokens)
+            if varied_query and varied_query != query:
+                results = self._keyword_retriever.query(
+                    varied_query,
+                    top_k=top_k,
+                )
+
         return [
             self._make_evidence(
                 unit=result.code_unit,

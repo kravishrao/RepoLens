@@ -134,6 +134,20 @@ def test_run_repolens_query_retrieval_topic() -> None:
     assert any("CrossEncoderReranker" in s for s in symbols)
 
 
+def test_run_repolens_query_chunking_topic() -> None:
+    """Verify specialized chunking evidence and explanation is returned for chunking queries."""
+    result = run_repolens_query(
+        repo_name="pallets/flask (illustrative snapshot)",
+        query="Where is chunking hapenning?",
+    )
+    file_paths = [u["file_path"] for u in result["evidence_units"]]
+    assert any("evaluation/chunker.py" in fp for fp in file_paths)
+    symbols = [u["symbol"] for u in result["evidence_units"]]
+    assert any("FixedSizeChunker" in s for s in symbols)
+    assert "FixedSizeChunker" in result["answer"]
+    assert "Naive RAG" in result["answer"] or "Baseline B0" in result["answer"]
+
+
 def test_run_repolens_query_verification_toggle() -> None:
     """Verify citation verification flag affects result status and precision."""
     verified_result = run_repolens_query(

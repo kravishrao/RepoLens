@@ -1,4 +1,8 @@
-"""RepoLens Dark Engineering Design System & Modern UI Theme."""
+"""RepoLens Dark Engineering Design System & Modern UI Theme.
+
+Designed for high-contrast obsidian dashboards, sleek geometric typography,
+elevated surface containers, and vibrant gradient KPI cards.
+"""
 
 from __future__ import annotations
 
@@ -13,10 +17,11 @@ def apply_theme() -> None:
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
         :root {
-            --rl-bg: #090D16;
-            --rl-sidebar: #0D131F;
-            --rl-surface: #111A2E;
-            --rl-elevated: #18233C;
+            /* Palette matching modern high-contrast obsidian design */
+            --rl-bg: #0B0E17;
+            --rl-sidebar: #101422;
+            --rl-surface: #141A28;
+            --rl-elevated: #1B2337;
             --rl-border: rgba(255, 255, 255, 0.08);
             --rl-border-hover: rgba(56, 189, 248, 0.4);
 
@@ -24,15 +29,19 @@ def apply_theme() -> None:
             --rl-secondary: #94A3B8;
             --rl-muted: #64748B;
 
+            /* Vibrant Accent Palette */
             --rl-cyan: #38BDF8;
             --rl-blue: #60A5FA;
             --rl-indigo: #818CF8;
             --rl-emerald: #34D399;
             --rl-amber: #FBBF24;
             --rl-rose: #FB7185;
+            --rl-coral: #FF6B4A;
+            --rl-purple: #A855F7;
 
-            --rl-glow-blue: rgba(56, 189, 248, 0.15);
-            --rl-glow-emerald: rgba(52, 211, 153, 0.15);
+            /* Glows & Shadows */
+            --rl-shadow-card: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+            --rl-shadow-kpi: 0 12px 28px -6px rgba(0, 0, 0, 0.4);
         }
 
         /* Base Application Layout */
@@ -44,8 +53,8 @@ def apply_theme() -> None:
         }
 
         [data-testid="stHeader"] {
-            background: rgba(9, 13, 22, 0.85);
-            backdrop-filter: blur(12px);
+            background: rgba(11, 14, 23, 0.85);
+            backdrop-filter: blur(14px);
             border-bottom: 1px solid var(--rl-border);
         }
 
@@ -90,7 +99,7 @@ def apply_theme() -> None:
             align-items: center;
             justify-content: space-between;
             padding: 0.8rem 1.4rem;
-            background: rgba(17, 26, 46, 0.6);
+            background: rgba(20, 26, 40, 0.6);
             backdrop-filter: blur(10px);
             border: 1px solid var(--rl-border);
             border-radius: 14px;
@@ -150,44 +159,189 @@ def apply_theme() -> None:
             font-size: 0.88rem;
         }
 
-        /* Hero Prompt Console */
-        .rl-console-card {
-            background: linear-gradient(180deg, rgba(17, 26, 46, 0.8) 0%, rgba(13, 19, 31, 0.8) 100%);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-            border-radius: 16px;
-            padding: 1.5rem 1.6rem;
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-            margin-bottom: 1.8rem;
+        /* 4 Signature Gradient KPI Cards */
+        .rl-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1.1rem;
+            margin: 1.2rem 0 1.6rem 0;
+        }
+
+        @media (max-width: 992px) {
+            .rl-kpi-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 600px) {
+            .rl-kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .rl-kpi-card {
+            border-radius: 14px;
+            padding: 1.25rem 1.4rem;
+            position: relative;
+            box-shadow: var(--rl-shadow-kpi);
+            color: #FFFFFF;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 120px;
+        }
+
+        .rl-kpi-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.5);
+        }
+
+        .rl-kpi-coral {
+            background: linear-gradient(135deg, #FF5A36 0%, #FF8533 100%);
+        }
+
+        .rl-kpi-cyan {
+            background: linear-gradient(135deg, #0284C7 0%, #38BDF8 100%);
+        }
+
+        .rl-kpi-emerald {
+            background: linear-gradient(135deg, #059669 0%, #34D399 100%);
+        }
+
+        .rl-kpi-purple {
+            background: linear-gradient(135deg, #7C3AED 0%, #A855F7 100%);
+        }
+
+        .rl-kpi-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .rl-kpi-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            opacity: 0.92;
+        }
+
+        .rl-kpi-badge-circle {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.22);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+        }
+
+        .rl-kpi-val {
+            font-size: 2rem;
+            font-weight: 800;
+            letter-spacing: -0.04em;
+            line-height: 1.1;
+            margin: 0.55rem 0 0.25rem 0;
+            color: #FFFFFF;
+        }
+
+        .rl-kpi-sub {
+            font-size: 0.78rem;
+            font-weight: 500;
+            opacity: 0.88;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Status Pills & Micro-Badges */
+        .rl-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.22rem 0.65rem;
+            border-radius: 20px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            font-family: 'JetBrains Mono', monospace;
+            text-transform: uppercase;
+        }
+
+        .rl-pill-active {
+            background: rgba(16, 185, 129, 0.16);
+            color: #34D399;
+            border: 1px solid rgba(52, 211, 153, 0.35);
+        }
+
+        .rl-pill-danger {
+            background: rgba(239, 68, 68, 0.16);
+            color: #F87171;
+            border: 1px solid rgba(248, 113, 113, 0.35);
+        }
+
+        .rl-pill-warning {
+            background: rgba(245, 158, 11, 0.16);
+            color: #FBBF24;
+            border: 1px solid rgba(251, 191, 36, 0.35);
+        }
+
+        .rl-pill-info {
+            background: rgba(56, 189, 248, 0.16);
+            color: #38BDF8;
+            border: 1px solid rgba(56, 189, 248, 0.35);
+        }
+
+        .rl-pill-neutral {
+            background: rgba(148, 163, 184, 0.12);
+            color: #94A3B8;
+            border: 1px solid rgba(148, 163, 184, 0.22);
+        }
+
+        /* Clean Target Bar & Status Indicators */
+        .rl-target-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.7rem 1.1rem;
+            background: rgba(18, 23, 34, 0.8);
+            border: 1px solid var(--rl-border);
+            border-radius: 10px;
+            margin-bottom: 1.2rem;
+            font-size: 0.85rem;
         }
 
         .rl-chip {
             display: inline-flex;
             align-items: center;
-            gap: 0.35rem;
-            padding: 0.3rem 0.7rem;
-            background: rgba(30, 41, 59, 0.7);
+            padding: 0.3rem 0.75rem;
+            background: rgba(255, 255, 255, 0.04);
             border: 1px solid var(--rl-border);
-            border-radius: 20px;
-            font-size: 0.78rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
             color: var(--rl-secondary);
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.15s ease;
         }
 
         .rl-chip:hover {
+            background: rgba(56, 189, 248, 0.12);
             border-color: var(--rl-cyan);
             color: var(--rl-text);
-            background: rgba(56, 189, 248, 0.12);
         }
 
-        /* Repository Status Badges */
+        /* Banner Components */
         .rl-active-banner {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.8rem 1.2rem;
-            background: linear-gradient(90deg, rgba(16, 37, 31, 0.8) 0%, rgba(13, 27, 24, 0.8) 100%);
-            border: 1px solid rgba(52, 211, 153, 0.3);
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(90deg, rgba(16, 37, 31, 0.85) 0%, rgba(13, 27, 24, 0.85) 100%);
+            border: 1px solid rgba(52, 211, 153, 0.35);
             border-left: 4px solid var(--rl-emerald);
             border-radius: 12px;
             margin-bottom: 1.4rem;
@@ -197,9 +351,9 @@ def apply_theme() -> None:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 0.8rem 1.2rem;
-            background: linear-gradient(90deg, rgba(37, 31, 21, 0.8) 0%, rgba(27, 23, 16, 0.8) 100%);
-            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 0.85rem 1.25rem;
+            background: linear-gradient(90deg, rgba(37, 31, 21, 0.85) 0%, rgba(27, 23, 16, 0.85) 100%);
+            border: 1px solid rgba(251, 191, 36, 0.35);
             border-left: 4px solid var(--rl-amber);
             border-radius: 12px;
             margin-bottom: 1.4rem;
@@ -207,7 +361,7 @@ def apply_theme() -> None:
 
         /* Metric Cards */
         div[data-testid="stMetric"] {
-            background: rgba(17, 26, 46, 0.75);
+            background: rgba(20, 26, 40, 0.8);
             backdrop-filter: blur(8px);
             border: 1px solid var(--rl-border);
             border-radius: 12px;
@@ -239,8 +393,8 @@ def apply_theme() -> None:
         /* Inputs & Text Area */
         div[data-testid="stTextArea"] textarea,
         div[data-testid="stTextInput"] input {
-            background: #0B101D !important;
-            border: 1px solid #1E293B !important;
+            background: #0E121E !important;
+            border: 1px solid #1E2638 !important;
             border-radius: 10px !important;
             color: var(--rl-text) !important;
             font-size: 0.95rem !important;
@@ -312,7 +466,7 @@ def apply_theme() -> None:
         [data-testid="stExpander"] {
             border: 1px solid var(--rl-border) !important;
             border-radius: 12px !important;
-            background: rgba(17, 26, 46, 0.6) !important;
+            background: rgba(20, 26, 40, 0.6) !important;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
             overflow: hidden;
             margin-bottom: 0.6rem;
@@ -324,14 +478,11 @@ def apply_theme() -> None:
             padding: 0.8rem 1rem;
         }
 
-        /* Images */
-        .stImage img {
-            border-radius: 8px;
-        }
-
-        [data-testid="stSidebar"] img {
-            border-radius: 6px;
-            margin-bottom: 0.25rem;
+        /* Data Tables */
+        [data-testid="stDataFrame"] {
+            border: 1px solid var(--rl-border);
+            border-radius: 12px;
+            overflow: hidden;
         }
 
         /* Cards & Findings */
@@ -346,6 +497,19 @@ def apply_theme() -> None:
         .rl-card:hover {
             border-color: rgba(56, 189, 248, 0.4);
             transform: translateY(-2px);
+        }
+
+        .rl-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--rl-text);
+            margin: 0.4rem 0 0.3rem 0;
+        }
+
+        .rl-card-description {
+            font-size: 0.86rem;
+            color: var(--rl-secondary);
+            line-height: 1.5;
         }
 
         .rl-evidence {
@@ -395,16 +559,6 @@ def apply_theme() -> None:
             color: var(--rl-rose);
             background: rgba(251, 113, 133, 0.12);
             border: 1px solid rgba(251, 113, 133, 0.3);
-        }
-
-        .rl-verified {
-            color: var(--rl-emerald);
-            font-weight: 600;
-        }
-
-        .rl-unverified {
-            color: var(--rl-amber);
-            font-weight: 600;
         }
 
         /* Footer */
