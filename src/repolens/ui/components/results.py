@@ -4,7 +4,11 @@ from __future__ import annotations
 
 import streamlit as st
 
-from repolens.ui.presentation import EvidenceViewModel, PresentationData
+from repolens.ui.presentation import (
+    EvidenceViewModel,
+    PresentationData,
+    format_citation_entry,
+)
 
 
 def render_overview_metrics(data: PresentationData) -> None:
@@ -78,6 +82,24 @@ def render_answer_card(data: PresentationData) -> None:
     with st.container(border=True):
         st.markdown(data.final_answer)
 
+        # Source Evidence Citations matching exact verification format
+        if data.all_evidence:
+            st.divider()
+            st.markdown(
+                "#### Source Evidence Citations (Verified against Repository Files)"
+            )
+            for idx, item in enumerate(data.all_evidence, start=1):
+                cit_text = format_citation_entry(
+                    index=idx,
+                    file_path=item.file_path,
+                    symbol=item.qualified_name or item.name,
+                    kind=item.kind,
+                    start_line=item.start_line,
+                    end_line=item.end_line,
+                    description=item.docstring,
+                )
+                st.markdown(f"- **`{cit_text}`**")
+
 
 def render_findings_section(data: PresentationData) -> None:
     """Render structured code findings, separating supported from inferred elements."""
@@ -126,17 +148,26 @@ def _render_findings_list(
     """Render a structured list of code findings."""
     for idx, item in enumerate(findings, start=1):
         with st.container(border=True):
-            col_sym, col_loc, col_kind = st.columns([3, 3, 2])
+            cit_label = format_citation_entry(
+                index=idx,
+                file_path=item.file_path,
+                symbol=item.qualified_name or item.name,
+                kind=item.kind,
+                start_line=item.start_line,
+                end_line=item.end_line,
+                description=item.docstring,
+            )
+            col_sym, col_loc, col_kind = st.columns([4, 2, 2])
 
             with col_sym:
                 badge = "VERIFIED" if item.is_supported else "INFERRED"
-                st.markdown(f"**{idx}. `{item.qualified_name}`** ({badge})")
+                st.markdown(f"**`{cit_label}`** ({badge})")
 
             with col_loc:
-                st.markdown(f"`{item.file_path}` ({item.line_reference})")
+                st.markdown(f"`{item.file_path}`")
 
             with col_kind:
-                st.caption(f"Kind: `{item.kind}` | Source: `{item.source}`")
+                st.caption(f"Source: `{item.source}`")
 
             if item.docstring:
                 st.caption(f"*Docstring:* {item.docstring}")
@@ -157,10 +188,16 @@ def render_evidence_viewer(data: PresentationData) -> None:
 
     for idx, item in enumerate(data.all_evidence, start=1):
         support_tag = "VERIFIED" if item.is_supported else "INFERRED"
-        expander_title = (
-            f"[{idx}] {item.qualified_name} ({item.kind}) — "
-            f"{item.file_path} ({item.line_reference}) [{support_tag}]"
+        cit_label = format_citation_entry(
+            index=idx,
+            file_path=item.file_path,
+            symbol=item.qualified_name or item.name,
+            kind=item.kind,
+            start_line=item.start_line,
+            end_line=item.end_line,
+            description=item.docstring,
         )
+        expander_title = f"{cit_label} · [{support_tag}]"
 
         with st.expander(expander_title, expanded=(idx == 1 and item.is_supported)):
             st.markdown(
@@ -177,7 +214,7 @@ def render_evidence_viewer(data: PresentationData) -> None:
                 st.info(f"**Docstring:**\n{item.docstring}")
 
             if item.content and item.content.strip():
-                st.markdown("**Source Snippet:**")
+                st.markdown(f"**Source Snippet ({item.line_reference}):**")
                 st.code(item.content, language="python", line_numbers=True)
             else:
                 st.caption(
@@ -226,10 +263,24 @@ def render_citation_validation(data: PresentationData) -> None:
                 col_head, col_status = st.columns([4, 1])
 
                 with col_head:
-                    st.markdown(
-                        f"**Citation #{idx}:** `{cit.symbol or 'Symbol'}` at "
-                        f"`{cit.file_path or 'unknown'}` ({cit.line_reference})"
+                    raw_ref = (cit.line_reference or "").strip()
+                    stripped_ref = (
+                        raw_ref.removeprefix("Lines ").removeprefix("Line ").strip()
                     )
+                    if "-" in stripped_ref:
+                        s_line, e_line = stripped_ref.split("-", 1)
+                    elif stripped_ref and stripped_ref != "unknown":
+                        s_line, e_line = stripped_ref.rstrip("+"), None
+                    else:
+                        s_line, e_line = None, None
+                    cit_label = format_citation_entry(
+                        index=idx,
+                        file_path=cit.file_path or "unknown",
+                        symbol=cit.symbol or "Symbol",
+                        start_line=s_line,
+                        end_line=e_line,
+                    )
+                    st.markdown(f"**`{cit_label}`**")
                 with col_status:
                     if cit.status == "valid":
                         st.success("VALID")

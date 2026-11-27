@@ -74,6 +74,30 @@ def run_repolens_query(
             imports = [imp.module for imp in u.imports[:5]]
             calls = [call.target for call in u.calls[:5]]
             score = round(max(0.95 - (idx * 0.04), 0.70), 2)
+
+            # Derive concise role description
+            desc = ""
+            if u.docstring:
+                desc = u.docstring.strip().splitlines()[0].rstrip(".")
+            elif u.kind == "class":
+                desc = "Class definition"
+            elif u.name == "analyze":
+                desc = "Plan traversal & bottleneck logic"
+            elif "_extract_columns" in u.name:
+                desc = "Regex filter parsing"
+            elif "_extract_table" in u.name:
+                desc = "SQL text fallback extractor"
+            elif "recommend" in u.name:
+                desc = "Wrapper entrypoint"
+            elif "analyze_query" in u.name or "route" in u.name:
+                desc = "FastAPI route handler"
+            elif "parse_explain" in u.name or "flatten_plan" in u.name:
+                desc = "Plan tree parser"
+            elif u.kind == "function":
+                desc = "Function definition"
+            elif u.kind == "method":
+                desc = "Method"
+
             evidence_units.append(
                 {
                     "unit_id": u.id,
@@ -89,6 +113,8 @@ def run_repolens_query(
                     "calls": calls,
                     "verified": enable_verification,
                     "score": score,
+                    "docstring": u.docstring or "",
+                    "description": desc,
                     "code": u.source_code[:1200] if u.source_code else "",
                 }
             )
@@ -126,6 +152,7 @@ def run_repolens_query(
                     "calls": ["char_to_line", "bisect.bisect_right"],
                     "verified": enable_verification,
                     "score": 0.96,
+                    "description": "Fixed-size character chunking with line tracking",
                     "code": (
                         "def chunk_text(self, text: str, file_path: str = 'unknown.py') -> list[FixedChunk]:\n"
                         "    '''Split a single file's text into fixed-size chunks with line tracking.'''\n"
@@ -156,6 +183,7 @@ def run_repolens_query(
                     "calls": [],
                     "verified": enable_verification,
                     "score": 0.93,
+                    "description": "Sliding-window chunker configuration",
                     "code": (
                         "class FixedSizeChunker:\n"
                         "    '''Splits source files into fixed-size character windows with overlap.'''\n"
@@ -182,6 +210,7 @@ def run_repolens_query(
                     "calls": ["ast.parse", "_extract_symbols"],
                     "verified": enable_verification,
                     "score": 0.88,
+                    "description": "Syntax-aware AST CodeUnit extraction",
                     "code": (
                         "def parse_file(self, file_path: Path) -> list[CodeUnit]:\n"
                         "    '''Parse Python file into discrete CodeUnits rather than naive text chunks.'''\n"

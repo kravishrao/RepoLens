@@ -275,3 +275,68 @@ def test_render_kpi_row():
         assert "rl-kpi-cyan" in rendered
         assert "C1" in rendered
         assert "C2" in rendered
+
+
+def test_format_citation_entry():
+    from repolens.ui.presentation import format_citation_entry
+
+    res1 = format_citation_entry(
+        index=1,
+        file_path="src/advisor/recommender.py",
+        symbol="QueryRecommender",
+        kind="class",
+        start_line=51,
+        end_line=292,
+    )
+    assert (
+        res1 == "[1] recommender.py - QueryRecommender (Class definition, lines 51-292)"
+    )
+
+    res2 = format_citation_entry(
+        index=2,
+        file_path="src/advisor/recommender.py",
+        symbol="QueryRecommender.analyze",
+        kind="method",
+        start_line=101,
+        end_line=240,
+        description="Plan traversal & bottleneck logic",
+    )
+    assert (
+        res2
+        == "[2] recommender.py - QueryRecommender.analyze (Plan traversal & bottleneck logic, lines 101-240)"
+    )
+
+    res3 = format_citation_entry(
+        index=6,
+        file_path="src/api/main.py",
+        symbol="analyze_query",
+        kind="function",
+        start_line=200,
+        end_line=312,
+        description="FastAPI route handler",
+    )
+    assert res3 == "[6] main.py - analyze_query (FastAPI route handler, lines 200-312)"
+
+
+def test_render_citation_validation_formats_lines_cleanly():
+    data = make_sample_presentation_data()
+    with (
+        patch("streamlit.subheader"),
+        patch("streamlit.success"),
+        patch("streamlit.info"),
+        patch("streamlit.warning"),
+        patch("streamlit.error"),
+        patch("streamlit.container"),
+        patch(
+            "streamlit.columns",
+            side_effect=[[MagicMock(), MagicMock()], [MagicMock() for _ in range(5)]],
+        ),
+        patch("streamlit.markdown") as mock_md,
+    ):
+        render_citation_validation(data)
+        md_calls = [str(c[0][0]) for c in mock_md.call_args_list if c[0]]
+        assert any(
+            "[1] calc.py - billing.calculate_total" in m and "lines 10-25" in m
+            for m in md_calls
+        )
+        assert not any("lines Lines" in m for m in md_calls)
