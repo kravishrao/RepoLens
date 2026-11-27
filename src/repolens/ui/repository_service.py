@@ -162,6 +162,13 @@ def resolve_repository_source(source: str) -> tuple[Path, str, str | None]:
     # Check if source is a remote Git URL
     is_remote = clean.startswith(("https://", "http://", "ssh://", "git://", "git@"))
     if is_remote:
+        repo_name = clean.rstrip("/").split("/")[-1]
+        if repo_name.endswith(".git"):
+            repo_name = repo_name[:-4]
+        existing_clone = PROJECT_ROOT / "data" / "repositories" / repo_name
+        if existing_clone.is_dir() and (existing_clone / ".git").exists():
+            return existing_clone, "remote", clean
+
         # load_repository handles cloning into data/repositories
         meta = load_repository(clean, workspace=PROJECT_ROOT / "data" / "repositories")
         return Path(meta.local_path), "remote", clean

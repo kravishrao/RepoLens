@@ -35,7 +35,10 @@ from repolens.ui.components.results import (
     render_overview_metrics,
 )
 from repolens.ui.components.sidebar import render_sidebar
-from repolens.ui.presentation import extract_presentation_data
+from repolens.ui.presentation import (
+    extract_presentation_data,
+    format_citation_entry,
+)
 from repolens.ui.repository_service import (
     LoadedRepository,
     get_bundled_repositories,
@@ -515,32 +518,55 @@ def render_investigations(config: dict[str, Any]) -> None:
             st.caption(f'Target: `{latest_repo}` · Question: "{latest_query}"')
 
             st.divider()
-            st.subheader("Source evidence citations")
+            st.subheader(
+                "Source Evidence Citations (Verified against Repository Files)"
+            )
             evidence_units = result.get("evidence_units", [])
 
             if not evidence_units:
                 st.info("No evidence units were retrieved for this query.")
             else:
-                for index, unit in enumerate(evidence_units, start=1):
+                formatted_units = [
+                    (
+                        unit,
+                        format_citation_entry(
+                            index=index,
+                            file_path=unit.get("file_path", "unknown"),
+                            symbol=unit.get("symbol", "unknown"),
+                            kind=unit.get("type") or unit.get("kind"),
+                            start_line=unit.get("start_line"),
+                            end_line=unit.get("end_line"),
+                            description=unit.get("description"),
+                        ),
+                    )
+                    for index, unit in enumerate(evidence_units, start=1)
+                ]
+
+                with st.container(border=True):
+                    for _unit, cit_line in formatted_units:
+                        st.markdown(f"- **`{cit_line}`**")
+
+                for index, (unit, cit_title) in enumerate(formatted_units, start=1):
                     verified = unit.get("verified", False)
                     status_badge = "Verified" if verified else "Unverified"
-                    title = (
-                        f"[{index}] {unit.get('file_path', 'Unknown')} · "
-                        f"{unit.get('symbol', 'Unknown')} · "
-                        f"Lines {unit.get('start_line', '?')}-{unit.get('end_line', '?')} · [{status_badge}]"
-                    )
+                    title = f"{cit_title} · [{status_badge}]"
 
                     with st.expander(title, expanded=(index == 1)):
                         detail_cols = st.columns(4)
-                        detail_cols[0].caption(f"Unit ID: `{unit.get('unit_id', '—')}`")
-                        detail_cols[1].caption(f"Kind: `{unit.get('type', '—')}`")
+                        detail_cols[0].caption(f"File: `{unit.get('file_path', '—')}`")
+                        detail_cols[1].caption(
+                            f"Lines: `{unit.get('start_line', '?')}-{unit.get('end_line', '?')}`"
+                        )
                         detail_cols[2].caption(
-                            f"Parent: `{unit.get('parent', 'None')}`"
+                            f"Kind: `{unit.get('type') or unit.get('kind', '—')}`"
                         )
                         detail_cols[3].caption(f"Score: `{unit.get('score', '—')}`")
 
                         code = unit.get("code", "")
                         if code:
+                            st.markdown(
+                                f"**Source Snippet (Lines {unit.get('start_line', '?')}-{unit.get('end_line', '?')}):**"
+                            )
                             st.code(code, language="python", line_numbers=True)
                         else:
                             st.caption("No snippet content available.")
@@ -553,12 +579,17 @@ def render_investigations(config: dict[str, Any]) -> None:
             if not evidence_units:
                 st.info("No CodeUnits retrieved.")
             else:
-                for unit in evidence_units:
-                    st.markdown(
-                        f"**{unit.get('symbol', 'Unknown symbol')}** "
-                        f"· `{unit.get('file_path', 'Unknown file')}` "
-                        f"· Lines {unit.get('start_line', '?')}-{unit.get('end_line', '?')}"
+                for index, unit in enumerate(evidence_units, start=1):
+                    cit_header = format_citation_entry(
+                        index=index,
+                        file_path=unit.get("file_path", "unknown"),
+                        symbol=unit.get("symbol", "unknown"),
+                        kind=unit.get("type") or unit.get("kind"),
+                        start_line=unit.get("start_line"),
+                        end_line=unit.get("end_line"),
+                        description=unit.get("description"),
                     )
+                    st.markdown(f"**`{cit_header}`**")
                     st.json(unit)
 
         # Tab 3: Agent Trace

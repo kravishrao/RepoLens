@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 # Sources that indicate direct code inspection
@@ -37,6 +38,49 @@ def format_line_reference(start_line: int | None, end_line: int | None) -> str:
     if start_line is not None:
         return f"Line {start_line}+"
     return "Lines unknown"
+
+
+def format_citation_entry(
+    index: int,
+    file_path: str | None,
+    symbol: str | None,
+    kind: str | None = None,
+    start_line: int | str | None = None,
+    end_line: int | str | None = None,
+    description: str | None = None,
+) -> str:
+    """Format citation to match '[1] recommender.py - QueryRecommender (Class definition, lines 51-292)'."""
+    basename = Path(file_path).name if file_path else "unknown.py"
+    clean_sym = symbol or "Symbol"
+
+    # Derive role / kind description
+    k = (kind or "code").lower()
+    if description and len(description.strip()) > 0:
+        first_line = description.strip().splitlines()[0].rstrip(".")
+        if len(first_line) > 50:
+            first_line = first_line[:47] + "..."
+        role = first_line
+    elif k == "class":
+        role = "Class definition"
+    elif k in ("function", "def"):
+        role = "Function definition"
+    elif k == "method":
+        role = "Method"
+    elif k == "module":
+        role = "Module definition"
+    elif k in ("chunk", "text_chunk", "fixed_chunk"):
+        role = "Text chunk"
+    else:
+        role = k.title()
+
+    if start_line is not None and end_line is not None and str(start_line) != "?":
+        line_str = f"lines {start_line}-{end_line}"
+    elif start_line is not None and str(start_line) != "?":
+        line_str = f"line {start_line}"
+    else:
+        line_str = "lines unknown"
+
+    return f"[{index}] {basename} - {clean_sym} ({role}, {line_str})"
 
 
 def is_supported_finding(item: Mapping[str, Any]) -> bool:
