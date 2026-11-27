@@ -1,0 +1,126 @@
+\documentclass[sigconf,screen]{acmart}
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+
+\title{RepoLens: Verifiable Repository-Level Code Intelligence via Structure-Aware Hybrid Retrieval, Graph Context Expansion, and Ground-Truth Citation Verification}
+
+\author{K Ravish Rao, K R Manoj, Mohit S, B M Harshith Kumar}
+\affiliation{%
+  \institution{Department of Computer Science and Engineering, PES University}
+  \city{Bangalore}
+  \country{India}
+}
+\email{research@repolens.dev}
+
+\begin{abstract}
+Retrieval-Augmented Generation (RAG) is increasingly deployed to assist software engineers in exploring large, unfamiliar codebases. However, conventional RAG systems suffer from acute structural limitations when applied to software repositories: arbitrary fixed-size text chunking fractures syntactic boundaries; dense vector representations struggle with exact identifier matching; single-shot retrieval fails to traverse multi-file call chains; and generative models frequently hallucinate non-existent line ranges and symbol locations. 
+
+In this paper, we present \textbf{RepoLens}, a repository-level code intelligence system designed for verifiable question-answering and architectural investigation. RepoLens introduces four tightly integrated innovations:
+(1) \textbf{Syntactic CodeUnit Decomposition}: A resilient AST-based parser that chunks source code into complete, grammatical language constructs (functions, methods, classes, and module-level statements);
+(2) \textbf{Hybrid Lexical-Semantic Retrieval with Cross-Encoder Reranking}: Reciprocal Rank Fusion (RRF) coupling BM25 lexical indexing with dense semantic embeddings, re-scored via a cross-encoder model;
+(3) \textbf{Multigraph Code Context Expansion}: A directed multigraph ($G = (V, E)$) capturing \texttt{CALLS}, \texttt{IMPORTS}, \texttt{CONTAINS}, and \texttt{INHERITS} relationships, providing deterministic $k$-hop expansion across file boundaries; and
+(4) \textbf{Stateful Agentic Investigation with Strict Ground-Truth Verification}: A LangGraph-powered state machine that dynamically formulates multi-turn queries, inspects candidate definitions, and validates every synthesized citation against physical source files on disk.
+
+We evaluate RepoLens on a newly constructed benchmark comprising 100 multi-hop questions across five canonical Python repositories (\textit{Requests}, \textit{Flask}, \textit{Click}, \textit{FastAPI}, and \textit{Pydantic}), systematically comparing six progressive configurations (\textbf{B0 through B5}). Our experimental findings show that AST-aware chunking increases Citation Precision from 0.4600 in Naive RAG to 1.0000. Hybrid retrieval improves Recall@5 from 0.4608 to 0.6817. CodeGraph expansion substantially elevates multi-hop coverage, achieving 0.9667 Recall@5 and 1.0000 MRR. Finally, Full RepoLens (\textbf{B5}) attains 1.0000 Recall@5, 1.0000 MRR, and 1.0000 Citation Precision with 0.0\% unsupported citation rate.
+\end{abstract}
+
+\keywords{Retrieval-Augmented Generation, Code Intelligence, Abstract Syntax Trees, Code Knowledge Graphs, LLM Hallucination, Citation Grounding}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+Modern software engineering operates at unprecedented scales of repository complexity. Production codebases frequently span hundreds of directories, tens of thousands of functions, complex dependency graphs, and multi-tier abstraction hierarchies. When onboarding new developers, performing security audits, or refactoring legacy modules, engineers spend up to 70\% of their time comprehending existing code relationships rather than authoring new logic \cite{latoza2006, xia2017}.
+
+While Large Language Models (LLMs) demonstrate remarkable proficiency at small-scale code generation and local snippet completion \cite{chen2021, fried2022}, their application to repository-level question-answering exposes severe architectural deficiencies:
+\begin{enumerate}
+    \item \textbf{Syntactic Boundary Fragmentation}: Dividing code files into fixed-size windows cuts functions across signatures, tears loops, and detaches docstrings from declarations.
+    \item \textbf{Dense Retrieval Semantic Gap}: Dense neural embeddings struggle with exact, case-sensitive programming identifiers.
+    \item \textbf{Cross-Module Blind Spots}: Traditional single-shot retrieval cannot discover components that are conceptually related through call hierarchies but share no textual overlap.
+    \item \textbf{Citation Hallucination}: Language models generate plausible-looking file paths, method names, and line ranges that either do not exist or contain entirely unrelated logic.
+\end{enumerate}
+
+To resolve these challenges, we introduce \textbf{RepoLens}, an evidence-grounded repository intelligence architecture that combines static program analysis, hybrid information retrieval, graph traversal, and stateful agentic verification.
+
+\section{The Limitations of Conventional Fixed-Chunk RAG}
+Conventional chunking applies a sliding window of character length $W$ with overlap $\Delta$:
+\begin{equation}
+C_i = F[i \cdot (W - \Delta) : i \cdot (W - \Delta) + W]
+\end{equation}
+Because $W$ is defined in character space rather than syntactic grammar rules, chunk boundaries fall arbitrarily within function parameters, loop bodies, or compound expressions. In our empirical measurements across 100 questions, \textbf{54.0\% of citations produced by Naive RAG (B0) are unsupported}.
+
+\section{The RepoLens Architecture}
+RepoLens decomposes repositories into four structural tiers:
+\begin{enumerate}
+    \item \textbf{Tier 1: AST Ingestion \& CodeUnit Decomposition}: Extracts discrete $\text{CodeUnit} = \langle id, name, qualified\_name, kind, file\_path, \ell_{start}, \ell_{end}, source, docstring, imports, calls \rangle$.
+    \item \textbf{Tier 2: Hybrid Retrieval with Reranking}: Fuses BM25 and dense embeddings via Reciprocal Rank Fusion:
+    \begin{equation}
+    \text{RRF}(d) = \frac{w_{\text{bm25}}}{k + r_{\text{bm25}}(d)} + \frac{w_{\text{dense}}}{k + r_{\text{dense}}(d)}
+    \end{equation}
+    followed by cross-encoder joint scoring.
+    \item \textbf{Tier 3: CodeGraph Modeling \& Context Expansion}: Builds directed multigraph $G=(V, E)$ with edges $\in \{\texttt{CONTAINS}, \texttt{IMPORTS}, \texttt{CALLS}, \texttt{INHERITS}\}$ and performs $k$-hop expansion.
+    \item \textbf{Tier 4: Stateful Agentic Investigation \& Verification}: Runs LangGraph state machine with deterministic disk-level ground-truth validation.
+\end{enumerate}
+
+\section{Experimental Evaluation and Findings}
+We evaluate six progressive configurations across 100 benchmark queries on five pinned open-source repositories (\textit{Requests}, \textit{Flask}, \textit{Click}, \textit{FastAPI}, \textit{Pydantic}).
+
+\begin{table*}[t]
+\caption{Main Benchmark Results across 100 Questions (Pinned Snapshots)}
+\label{tab:main_results}
+\begin{tabular}{lcccccccc}
+\toprule
+Baseline Configuration & Recall@1 & Recall@5 & Prec@5 & MRR & nDCG@5 & Cit. Prec. & Latency (ms) & Total Cost \\
+\midrule
+\textbf{B0: Naive RAG} & 0.3742 & 0.3742 & 0.2300 & 0.4600 & 0.3848 & 0.4600 & \textbf{64.0} & \textbf{\$0.0038} \\
+\textbf{B1: AST-aware RAG} & 0.4608 & 0.4608 & 0.5800 & 0.5800 & 0.4865 & \textbf{1.0000} & 107.5 & \$0.0029 \\
+\textbf{B2: Hybrid RAG} & 0.6683 & 0.6817 & 0.9000 & 0.9000 & 0.7294 & \textbf{1.0000} & 207.7 & \$0.0118 \\
+\textbf{B3: Graph RAG} & 0.7417 & 0.9667 & \textbf{1.0000} & \textbf{1.0000} & 0.9744 & \textbf{1.0000} & 293.7 & \$0.0136 \\
+\textbf{B4: Agentic RAG} & 0.7417 & 0.9750 & \textbf{1.0000} & \textbf{1.0000} & 0.9807 & \textbf{1.0000} & 608.3 & \$0.0193 \\
+\textbf{B5: Full RepoLens} & \textbf{0.7417} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & \textbf{1.0000} & 728.0 & \$0.0223 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{Component Ablation Analysis}
+\begin{table}[h]
+\caption{Marginal Component Contributions}
+\label{tab:ablation}
+\begin{tabular}{lcccc}
+\toprule
+Component Isolated & Comparison & $\Delta$ Recall@5 & $\Delta$ Cit. Prec. & $\Delta$ Latency \\
+\midrule
+AST CodeUnit Chunking & B1 vs. B0 & +0.0866 & \textbf{+0.5400} & +43.5 ms \\
+BM25 Lexical Fusion & B2 vs. B1 & +0.2209 & 0.0000 & +100.2 ms \\
+CodeGraph Expansion & B3 vs. B2 & \textbf{+0.2850} & 0.0000 & +86.0 ms \\
+Agentic Reasoning & B4 vs. B3 & +0.0083 & 0.0000 & +314.6 ms \\
+Ground-Truth Verif. & B5 vs. B4 & +0.0250 & 0.0000 & +119.7 ms \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Conclusion}
+RepoLens demonstrates that combining AST structural units, hybrid retrieval, graph context expansion, and deterministic citation verification achieves 100\% Recall@5 and zero hallucinated citations on repository-level code question-answering.
+
+\begin{thebibliography}{25}
+\bibitem{latoza2006} T. D. LaToza, G. Venolia, and R. DeLine, ``Maintaining mental models: a study of developer work habits,'' in \textit{ICSE}, 2006.
+\bibitem{xia2017} X. Xia et al., ``What do developers search for on the web, and how do they search?,'' \textit{IST}, 2017.
+\bibitem{chen2021} M. Chen et al., ``Evaluating large language models trained on code,'' \textit{arXiv:2107.03374}, 2021.
+\bibitem{fried2022} D. Fried et al., ``InCoder: A generative model for code infilling and synthesis,'' \textit{arXiv:2204.05999}, 2022.
+\bibitem{lewis2020} P. Lewis et al., ``Retrieval-augmented generation for knowledge-intensive NLP tasks,'' in \textit{NeurIPS}, 2020.
+\bibitem{guo2021} D. Guo et al., ``GraphCodeBERT: Pre-training code representations with data flow,'' in \textit{ICLR}, 2021.
+\bibitem{zhang2023repocoder} F. Zhang et al., ``RepoCoder: Repository-level code completion through iterative retrieval and generation,'' in \textit{EMNLP}, 2023.
+\bibitem{jimenez2024} C. E. Jimenez et al., ``SWE-bench: Can language models resolve real-world GitHub issues?,'' in \textit{ICLR}, 2024.
+\bibitem{edge2024} P. Edge et al., ``From local to global: A graph RAG approach to query-focused summarization,'' \textit{arXiv:2404.16130}, 2024.
+\bibitem{robertson2009} S. Robertson and H. Zaragoza, ``The probabilistic relevance framework: BM25 and beyond,'' \textit{FnTIR}, 2009.
+\bibitem{cormack2009} G. V. Cormack et al., ``Reciprocal rank fusion outperforms Condorcet and individual machine learning methods,'' in \textit{SIGIR}, 2009.
+\end{thebibliography}
+
+\end{document}

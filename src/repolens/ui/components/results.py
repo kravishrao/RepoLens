@@ -1,0 +1,397 @@
+"""Streamlit UI rendering components for RepoLens presentation interface."""
+
+from __future__ import annotations
+
+import streamlit as st
+
+from repolens.ui.presentation import (
+    EvidenceViewModel,
+    PresentationData,
+    format_citation_entry,
+)
+
+
+def render_overview_metrics(data: PresentationData) -> None:
+    """Render high-level metrics for the investigation."""
+    col1, col2, col3, col4, col5 = st.columns(5)
+
+    col1.metric(
+        label="Evidence Units",
+        value=len(data.all_evidence),
+        help="Total relevant code evidence records collected by agent tools",
+    )
+
+    col2.metric(
+        label="Unique Elements",
+        value=data.unique_code_elements_count,
+        help="Distinct functions, classes, or modules investigated",
+    )
+
+    col3.metric(
+        label="Tools Executed",
+        value=len(data.executed_tools),
+        help="Number of agent tools invoked across iterations",
+    )
+
+    duration_s = round(data.total_duration_ms / 1000.0, 2)
+    col4.metric(
+        label="Duration",
+        value=f"{duration_s}s",
+        help="Cumulative execution time across all tool runs",
+    )
+
+    val_status = data.validation_summary.overall_status.upper()
+    col5.metric(
+        label="Citation Status",
+        value=val_status,
+        help="Outcome of source citation and claim verification",
+    )
+
+
+def render_answer_card(data: PresentationData) -> None:
+    """Render the main generated answer in a prominent readable container."""
+    st.subheader("Grounded Answer")
+
+    if not data.final_answer or not data.has_evidence:
+        render_empty_or_failed_state(data)
+        return
+
+    # Clean status details
+    status_label = "Complete" if data.is_complete else "In Progress"
+    certainty_label = data.evidence_status.upper()
+    st.caption(
+        f"**Question:** {data.query or 'General inquiry'} | "
+        f"**Status:** `{status_label}` | "
+        f"**Evidence Certainty:** `{certainty_label}` | "
+        f"**Termination Reason:** `{data.termination_reason}`"
+    )
+
+    # Highlight conflicting evidence if detected
+    if data.is_conflicting and data.conflicts:
+        with st.container(border=True):
+            st.warning("Conflicting Repository Evidence Detected")
+            st.markdown(
+                "Multiple contradictory definitions, signatures, or declarations were discovered:"
+            )
+            for conf in data.conflicts:
+                st.markdown(
+                    f"- **`{conf.get('symbol')}`** (`{conf.get('conflict_type')}`): {conf.get('description')}"
+                )
+
+    # Render formatted markdown content
+    with st.container(border=True):
+        st.markdown(data.final_answer)
+
+        # Source Evidence Citations matching exact verification format
+        if data.all_evidence:
+            st.divider()
+            st.markdown(
+                "#### Source Evidence Citations (Verified against Repository Files)"
+            )
+            for idx, item in enumerate(data.all_evidence, start=1):
+                cit_text = format_citation_entry(
+                    index=idx,
+                    file_path=item.file_path,
+                    symbol=item.qualified_name or item.name,
+                    kind=item.kind,
+                    start_line=item.start_line,
+                    end_line=item.end_line,
+                    description=item.docstring,
+                )
+                st.markdown(f"- **`{cit_text}`**")
+
+
+def render_findings_section(data: PresentationData) -> None:
+    """Render structured code findings, separating supported from inferred elements."""
+    st.subheader("Code Findings & Citations")
+
+    if not data.has_evidence:
+        st.info("No code elements were identified during this investigation.")
+        return
+
+    tab_supported, tab_inferred, tab_all = st.tabs(
+        [
+            f"Verified Findings ({len(data.supported_findings)})",
+            f"Graph Context ({len(data.inferred_findings)})",
+            f"All Findings ({len(data.all_evidence)})",
+        ]
+    )
+
+    with tab_supported:
+        st.markdown(
+            "> **Directly Inspected Evidence**: Source code was directly inspected and verified "
+            "using AST extraction, file inspection, or verified source retrieval."
+        )
+        if data.supported_findings:
+            _render_findings_list(data.supported_findings, badge_color="green")
+        else:
+            st.warning("No findings were directly inspected in source files.")
+
+    with tab_inferred:
+        st.markdown(
+            "> **Inferred Context / Graph References**: Code elements discovered through code-graph "
+            "relationships (callers, callees, dependencies) without direct full-file inspection."
+        )
+        if data.inferred_findings:
+            _render_findings_list(data.inferred_findings, badge_color="orange")
+        else:
+            st.success("All retrieved findings are backed by direct source inspection.")
+
+    with tab_all:
+        _render_findings_list(data.all_evidence, badge_color="blue")
+
+
+def _render_findings_list(
+    findings: list[EvidenceViewModel],
+    badge_color: str = "blue",
+) -> None:
+    """Render a structured list of code findings."""
+    for idx, item in enumerate(findings, start=1):
+        with st.container(border=True):
+            cit_label = format_citation_entry(
+                index=idx,
+                file_path=item.file_path,
+                symbol=item.qualified_name or item.name,
+                kind=item.kind,
+                start_line=item.start_line,
+                end_line=item.end_line,
+                description=item.docstring,
+            )
+            col_sym, col_loc, col_kind = st.columns([4, 2, 2])
+
+            with col_sym:
+                badge = "VERIFIED" if item.is_supported else "INFERRED"
+                st.markdown(f"**`{cit_label}`** ({badge})")
+
+            with col_loc:
+                st.markdown(f"`{item.file_path}`")
+
+            with col_kind:
+                st.caption(f"Source: `{item.source}`")
+
+            if item.docstring:
+                st.caption(f"*Docstring:* {item.docstring}")
+
+
+def render_evidence_viewer(data: PresentationData) -> None:
+    """Provide an expandable evidence viewer with syntax-highlighted code snippets."""
+    st.subheader("Source Code Evidence")
+
+    if not data.all_evidence:
+        st.info("No source code snippets available.")
+        return
+
+    st.markdown(
+        "Expand each code unit below to inspect the extracted source text, line boundaries, "
+        "and retrieval metadata."
+    )
+
+    for idx, item in enumerate(data.all_evidence, start=1):
+        support_tag = "VERIFIED" if item.is_supported else "INFERRED"
+        cit_label = format_citation_entry(
+            index=idx,
+            file_path=item.file_path,
+            symbol=item.qualified_name or item.name,
+            kind=item.kind,
+            start_line=item.start_line,
+            end_line=item.end_line,
+            description=item.docstring,
+        )
+        expander_title = f"{cit_label} · [{support_tag}]"
+
+        with st.expander(expander_title, expanded=(idx == 1 and item.is_supported)):
+            st.markdown(
+                f"- **Symbol:** `{item.qualified_name}`\n"
+                f"- **File:** `{item.file_path}`\n"
+                f"- **Lines:** `{item.line_reference}`\n"
+                f"- **Discovered via:** `{item.source}`"
+            )
+
+            if item.score is not None:
+                st.caption(f"Relevance Score: `{item.score:.4f}`")
+
+            if item.docstring:
+                st.info(f"**Docstring:**\n{item.docstring}")
+
+            if item.content and item.content.strip():
+                st.markdown(f"**Source Snippet ({item.line_reference}):**")
+                st.code(item.content, language="python", line_numbers=True)
+            else:
+                st.caption(
+                    "*(No source code snippet retained for this graph reference)*"
+                )
+
+            if item.metadata:
+                with st.expander("Show Raw Metadata", expanded=False):
+                    st.json(item.metadata)
+
+
+def render_citation_validation(data: PresentationData) -> None:
+    """Display citation-validation outcomes, checks checklist, and detected issues."""
+    st.subheader("Citation Verification")
+
+    val = data.validation_summary
+
+    if not val.enabled and not data.citations:
+        st.info(
+            "Citation validation is disabled or was not performed. "
+            "To enable validation, provide a valid repository root."
+        )
+        return
+
+    # Validation summary banner
+    if val.overall_status == "valid":
+        st.success(
+            f"Validation Passed: All {val.citation_count} extracted citations are verified "
+            "against source files and AST symbols."
+        )
+    elif val.overall_status in {"invalid", "incomplete"}:
+        st.warning(
+            f"Validation Status: {val.overall_status.upper()}: "
+            f"{val.valid_citation_count}/{val.citation_count} citations valid, "
+            f"{val.invalid_citation_count} invalid, {val.incomplete_citation_count} incomplete."
+        )
+    else:
+        st.info(f"Validation Status: `{val.overall_status}`")
+
+    # Detailed Citation Cards
+    if data.citations:
+        st.markdown("#### Extracted Citations")
+
+        for idx, cit in enumerate(data.citations, start=1):
+            with st.container(border=True):
+                col_head, col_status = st.columns([4, 1])
+
+                with col_head:
+                    raw_ref = (cit.line_reference or "").strip()
+                    stripped_ref = (
+                        raw_ref.removeprefix("Lines ").removeprefix("Line ").strip()
+                    )
+                    if "-" in stripped_ref:
+                        s_line, e_line = stripped_ref.split("-", 1)
+                    elif stripped_ref and stripped_ref != "unknown":
+                        s_line, e_line = stripped_ref.rstrip("+"), None
+                    else:
+                        s_line, e_line = None, None
+                    cit_label = format_citation_entry(
+                        index=idx,
+                        file_path=cit.file_path or "unknown",
+                        symbol=cit.symbol or "Symbol",
+                        start_line=s_line,
+                        end_line=e_line,
+                    )
+                    st.markdown(f"**`{cit_label}`**")
+                with col_status:
+                    if cit.status == "valid":
+                        st.success("VALID")
+                    elif cit.status == "invalid":
+                        st.error("INVALID")
+                    elif cit.status == "incomplete":
+                        st.warning("INCOMPLETE")
+                    else:
+                        st.info("UNVERIFIED")
+
+                # Checklist
+                c1, c2, c3, c4, c5 = st.columns(5)
+                c1.markdown(
+                    f"File Exists: {'[PASS]' if cit.file_exists else '[FAIL]' if cit.file_exists is False else '[N/A]'}"
+                )
+                c2.markdown(
+                    f"Safe Path: {'[PASS]' if cit.path_is_safe else '[FAIL]' if cit.path_is_safe is False else '[N/A]'}"
+                )
+                c3.markdown(
+                    f"Lines Valid: {'[PASS]' if cit.line_range_valid else '[FAIL]' if cit.line_range_valid is False else '[N/A]'}"
+                )
+                c4.markdown(
+                    f"Symbol Found: {'[PASS]' if cit.symbol_found else '[FAIL]' if cit.symbol_found is False else '[N/A]'}"
+                )
+                c5.markdown(
+                    f"Unit Matched: {'[PASS]' if cit.code_unit_found else '[FAIL]' if cit.code_unit_found is False else '[N/A]'}"
+                )
+
+                # Issues
+                if cit.issues:
+                    st.markdown("**Issues detected:**")
+                    for iss in cit.issues:
+                        st.error(f"- `[{iss['code']}]` {iss['message']}")
+
+    # Claim Validation
+    if data.claims:
+        st.markdown("#### Factual Location Claims")
+        for cl in data.claims:
+            icon = "[PASS]" if cl.status == "valid" else "[FAIL]"
+            st.markdown(f"- **{icon}** Claim: {cl.claim} (`{cl.status}`)")
+            if cl.issues:
+                for iss in cl.issues:
+                    st.caption(f"  * Issue: {iss.get('message')}")
+
+
+def render_investigation_trace(data: PresentationData) -> None:
+    """Show the investigation trace, including executed tools and relevant findings."""
+    st.subheader("Agent Execution Trace")
+
+    # Executed tools overview
+    if data.executed_tools:
+        st.markdown("**Tools Executed in Workflow:**")
+        tools_html = " ".join(f"`{tool}`" for tool in data.executed_tools)
+        st.markdown(tools_html)
+
+    if not data.trace_steps:
+        st.info("No detailed execution trace records available.")
+        return
+
+    st.markdown("#### Step-by-Step Tool Invocations")
+
+    for step in data.trace_steps:
+        status_label = "[PASS]" if step.status == "success" else "[FAIL]"
+        duration_s = round(step.duration_ms / 1000.0, 3)
+
+        with st.container(border=True):
+            col_step, col_tool, col_perf, col_results = st.columns([1, 2, 2, 2])
+
+            with col_step:
+                st.markdown(f"**Iter {step.iteration}**")
+
+            with col_tool:
+                st.markdown(f"{status_label} `{step.tool}`")
+
+            with col_perf:
+                st.caption(f"Duration: `{duration_s}s` ({step.duration_ms} ms)")
+
+            with col_results:
+                st.caption(
+                    f"Results: {step.result_count} raw, **{step.retained_count} retained**"
+                )
+
+            if step.findings:
+                st.caption(f"Retained Evidence IDs: {', '.join(step.findings)}")
+
+            if step.error:
+                st.error(f"Error: {step.error}")
+
+
+def render_empty_or_failed_state(data: PresentationData) -> None:
+    """Render graceful warning or error message when evidence is missing or investigation failed."""
+    if data.has_errors:
+        st.error("Investigation Encountered Errors")
+        st.markdown("The agent encountered errors while executing repository tools:")
+        for err in data.errors:
+            st.markdown(f"- **`{err['tool']}`**: {err['error']}")
+
+    if not data.has_evidence or data.evidence_status == "insufficient":
+        st.warning("Insufficient Code Evidence Discovered")
+        reason_text = (
+            "\n".join(f"- {r}" for r in data.insufficient_reasons)
+            if data.insufficient_reasons
+            else "- No relevant code units were located."
+        )
+        st.markdown(
+            f"The repository evidence is insufficient to answer the question conclusively.\n\n"
+            f"**Identified Issues:**\n{reason_text}\n\n"
+            f"**Termination Reason:** `{data.termination_reason}`\n\n"
+            "**Suggestions to refine your search:**\n"
+            "- Check that the repository directory exists and contains valid `.py` Python files.\n"
+            "- Try query keywords matching function, class, or module names (e.g., `calculate_total`, `Client`).\n"
+            "- Check whether the requested functionality is implemented in external third-party dependencies.\n"
+            "- Increase the maximum iterations or evidence capacity in the sidebar controls."
+        )
